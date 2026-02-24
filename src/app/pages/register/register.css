@@ -1,0 +1,19 @@
+.auth {
+  min-height: 70vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+:host ::ng-deep .p-card {
+  width: 100%;
+  max-width: 520px;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.link {
+  margin-top: 12px;
+}

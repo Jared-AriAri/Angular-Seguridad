@@ -2,18 +2,21 @@
   <p-card header="Login">
     <div class="p-fluid">
       <div class="field">
-        <label>Email</label>
-        <input pInputText type="email" placeholder="correo@ejemplo.com" />
+        <label>Usuario</label>
+        <input pInputText [(ngModel)]="user" placeholder="admin" />
       </div>
 
       <div class="field">
         <label>Contraseña</label>
-        <input pInputText type="password" placeholder="••••••••" />
+        <input pInputText type="password" [(ngModel)]="pass" placeholder="Admin@12345!" />
       </div>
 
-      <button pButton label="Entrar" icon="pi pi-check" class="w-full"></button>
+      <button pButton label="Entrar" icon="pi pi-sign-in" (click)="login()"></button>
 
-      <div style="margin-top:12px">
+      <p-message *ngIf="error" severity="error" [text]="error"></p-message>
+      <p-message *ngIf="success" severity="success" [text]="success"></p-message>
+
+      <div class="link">
         <a routerLink="/register">No tengo cuenta → Registrarme</a>
       </div>
     </div>

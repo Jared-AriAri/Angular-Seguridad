@@ -1,24 +1,64 @@
 <div class="auth">
-  <p-card header="Register">
+  <p-card header="Registro">
     <div class="p-fluid">
       <div class="field">
-        <label>Nombre</label>
-        <input pInputText type="text" />
+        <label>Usuario</label>
+        <input pInputText [(ngModel)]="username" />
+        <p-message *ngIf="submitted && errors.username" severity="error" [text]="errors.username"></p-message>
       </div>
 
       <div class="field">
         <label>Email</label>
-        <input pInputText type="email" />
+        <input pInputText [(ngModel)]="email" />
+        <p-message *ngIf="submitted && errors.email" severity="error" [text]="errors.email"></p-message>
+      </div>
+
+      <div class="field">
+        <label>Nombre completo</label>
+        <input pInputText [(ngModel)]="fullName" />
+        <p-message *ngIf="submitted && errors.fullName" severity="error" [text]="errors.fullName"></p-message>
+      </div>
+
+      <div class="field">
+        <label>Dirección</label>
+        <input pInputText [(ngModel)]="address" />
+        <p-message *ngIf="submitted && errors.address" severity="error" [text]="errors.address"></p-message>
+      </div>
+
+      <div class="field">
+        <label>Teléfono (solo números)</label>
+        <input pInputText [ngModel]="phone" (ngModelChange)="onPhoneInput($event)" />
+        <p-message *ngIf="submitted && errors.phone" severity="error" [text]="errors.phone"></p-message>
+      </div>
+
+      <div class="field">
+        <label>Fecha de nacimiento</label>
+        <input pInputText type="date" [(ngModel)]="birthDate" />
+        <p-message *ngIf="submitted && errors.birthDate" severity="error" [text]="errors.birthDate"></p-message>
       </div>
 
       <div class="field">
         <label>Contraseña</label>
-        <input pInputText type="password" />
+        <input pInputText type="password" [(ngModel)]="password" />
+        <small>Mínimo 10 caracteres y al menos 1 símbolo especial: ! @ # $ % ^ & * ( )</small>
+        <p-message *ngIf="submitted && errors.password" severity="error" [text]="errors.password"></p-message>
       </div>
 
-      <button pButton label="Crear cuenta" icon="pi pi-user-plus" severity="success"></button>
+      <div class="field">
+        <label>Confirmar contraseña</label>
+        <input pInputText type="password" [(ngModel)]="confirmPassword" />
+        <p-message
+          *ngIf="submitted && errors.confirmPassword"
+          severity="error"
+          [text]="errors.confirmPassword"
+        ></p-message>
+      </div>
 
-      <div style="margin-top:12px">
+      <button pButton label="Registrar" icon="pi pi-user-plus" severity="success" (click)="submit()" [disabled]="submitted && !isValid"></button>
+
+      <p-message *ngIf="success" severity="success" [text]="success"></p-message>
+
+      <div class="link">
         <a routerLink="/login">Ya tengo cuenta → Login</a>
       </div>
     </div>
