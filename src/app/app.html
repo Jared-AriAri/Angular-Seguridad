@@ -1,1 +1,38 @@
-<router-outlet></router-outlet>
+<p-splitter [style]="{ height: '100vh' }" [panelSizes]="showSidebar ? [22, 78] : [0, 100]">
+
+  <ng-template pTemplate="panel" *ngIf="showSidebar">
+    <p-panel [showHeader]="false">
+      <ng-template pTemplate="content">
+        <div class="p-d-flex p-flex-column p-h-full p-p-3">
+
+          <div class="p-mb-3">
+            <div class="p-text-bold p-mb-2">{{ projectName }}</div>
+            <p-tag [value]="'API ' + apiVersion" severity="info"></p-tag>
+          </div>
+
+          <p-divider></p-divider>
+
+          <p-menu [model]="menuItems"></p-menu>
+
+          <div class="p-mt-auto p-pt-3">
+            <small class="p-text-secondary">
+              Versión API: {{ apiVersion }}
+            </small>
+          </div>
+
+        </div>
+      </ng-template>
+    </p-panel>
+  </ng-template>
+
+  <ng-template pTemplate="panel">
+    <p-panel [showHeader]="false">
+      <ng-template pTemplate="content">
+        <div class="p-p-4">
+          <router-outlet></router-outlet>
+        </div>
+      </ng-template>
+    </p-panel>
+  </ng-template>
+
+</p-splitter>

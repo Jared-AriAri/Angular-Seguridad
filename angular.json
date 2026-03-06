@@ -25,10 +25,11 @@
                 "input": "public"
               }
             ],
-            "styles": [
-              "node_modules/primeicons/primeicons.css",
-              "src/styles.css"
-            ]
+              "styles": [
+                "node_modules/primeicons/primeicons.css",
+                "node_modules/primeflex/primeflex.css",
+                "src/styles.css"
+              ]
           },
           "configurations": {
             "production": {

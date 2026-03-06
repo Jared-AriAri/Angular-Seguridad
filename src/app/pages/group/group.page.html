@@ -1,0 +1,243 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<p-card
+  styleClass="auth-card auth-card--premium"
+  [style]="{ width: '980px', maxWidth: '96vw' }"
+>
+  <ng-template pTemplate="header">
+    <div class="auth-head">
+      <div class="auth-title">Groups</div>
+      <div class="auth-subtitle">CRUD con PrimeNG + localStorage</div>
+    </div>
+  </ng-template>
+
+  <div class="auth-body">
+    <p-toolbar>
+      <ng-template pTemplate="start">
+        <button
+          pButton
+          type="button"
+          icon="pi pi-plus"
+          label="Nuevo"
+          class="p-button-success"
+          (click)="openCreate()"
+        ></button>
+      </ng-template>
+
+      <ng-template pTemplate="end">
+        <span class="p-input-icon-left w-full auth-input" style="max-width: 320px;">
+          <i class="pi pi-search"></i>
+          <input
+            pInputText
+            type="text"
+            class="w-full"
+            [(ngModel)]="q"
+            placeholder="Buscar..."
+          />
+        </span>
+      </ng-template>
+    </p-toolbar>
+
+    <div style="margin-top: 12px;">
+      <p-table
+        [value]="groups"
+        [loading]="loading"
+        [paginator]="true"
+        [rows]="8"
+        [rowsPerPageOptions]="[8, 16, 32]"
+        [globalFilterFields]="['name', 'description', 'status']"
+        [filters]="{ global: { value: q, matchMode: 'contains' } }"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 28%;">Nombre</th>
+            <th>Descripción</th>
+            <th style="width: 140px;">Estado</th>
+            <th style="width: 200px; text-align: right;">Acciones</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-g>
+          <tr>
+            <td>
+              <div style="font-weight: 800;">{{ g.name }}</div>
+              <div style="font-size: 12px; opacity: 0.7;">
+                {{ g.updatedAt | date: "short" }}
+              </div>
+            </td>
+
+            <td>{{ g.description || "—" }}</td>
+
+            <td>
+              <p-tag
+                [value]="statusLabel(g.status)"
+                [severity]="statusSeverity(g.status)"
+              ></p-tag>
+            </td>
+
+            <td style="text-align: right; white-space: nowrap;">
+              <button
+                pButton
+                type="button"
+                icon="pi pi-eye"
+                class="p-button-text"
+                (click)="openView(g)"
+              ></button>
+
+              <button
+                pButton
+                type="button"
+                icon="pi pi-pencil"
+                class="p-button-text"
+                (click)="openEdit(g)"
+              ></button>
+
+              <button
+                pButton
+                type="button"
+                icon="pi pi-trash"
+                class="p-button-text p-button-danger"
+                (click)="askDelete(g)"
+              ></button>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="4" style="text-align: center; padding: 18px; opacity: 0.7;">
+              No hay grupos.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</p-card>
+
+<p-dialog
+  [(visible)]="dialogOpen"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '520px', maxWidth: '94vw' }"
+  [header]="form.id ? 'Editar grupo' : 'Nuevo grupo'"
+>
+  <div class="p-fluid formgrid grid">
+    <div class="field col-12">
+      <label>Nombre</label>
+      <span class="p-input-icon-left w-full auth-input">
+        <i class="pi pi-tag"></i>
+        <input
+          pInputText
+          class="w-full"
+          [(ngModel)]="form.name"
+          placeholder="Ej. Grupo Ventas"
+        />
+      </span>
+    </div>
+
+    <div class="field col-12">
+      <label>Descripción</label>
+      <span class="p-input-icon-left w-full auth-input">
+        <i class="pi pi-align-left"></i>
+        <input
+          pInputText
+          class="w-full"
+          [(ngModel)]="form.description"
+          placeholder="Opcional"
+        />
+      </span>
+    </div>
+
+    <div class="field col-12">
+      <label>Estado</label>
+      <div class="p-fluid formgrid grid">
+        <div class="col-12 md:col-6">
+          <button
+            pButton
+            type="button"
+            class="w-full"
+            [class]="form.status === 'active' ? 'p-button-success' : 'p-button-outlined'"
+            icon="pi pi-check"
+            label="Activo"
+            (click)="form.status = 'active'"
+          ></button>
+        </div>
+
+        <div class="col-12 md:col-6">
+          <button
+            pButton
+            type="button"
+            class="w-full"
+            [class]="form.status === 'inactive' ? 'p-button-secondary' : 'p-button-outlined'"
+            icon="pi pi-minus-circle"
+            label="Inactivo"
+            (click)="form.status = 'inactive'"
+          ></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button
+      pButton
+      type="button"
+      class="p-button-text"
+      label="Cancelar"
+      (click)="dialogOpen = false"
+    ></button>
+
+    <button
+      pButton
+      type="button"
+      class="p-button-primary"
+      icon="pi pi-check"
+      label="Guardar"
+      (click)="save()"
+    ></button>
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  [(visible)]="viewOpen"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '520px', maxWidth: '94vw' }"
+  header="Detalle"
+>
+  <div *ngIf="selected" class="p-fluid">
+    <div class="field">
+      <label style="opacity: 0.7;">Nombre</label>
+      <div style="font-weight: 800;">{{ selected.name }}</div>
+    </div>
+
+    <div class="field" style="margin-top: 10px;">
+      <label style="opacity: 0.7;">Descripción</label>
+      <div style="font-weight: 700;">{{ selected.description || "—" }}</div>
+    </div>
+
+    <div class="field" style="margin-top: 10px;">
+      <label style="opacity: 0.7;">Estado</label>
+      <div>
+        <p-tag
+          [value]="statusLabel(selected.status)"
+          [severity]="statusSeverity(selected.status)"
+        ></p-tag>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top: 10px;">
+      <label style="opacity: 0.7;">Creado</label>
+      <div style="font-weight: 700;">{{ selected.createdAt | date: "medium" }}</div>
+    </div>
+
+    <div class="field" style="margin-top: 10px;">
+      <label style="opacity: 0.7;">Actualizado</label>
+      <div style="font-weight: 700;">{{ selected.updatedAt | date: "medium" }}</div>
+    </div>
+  </div>
+</p-dialog>

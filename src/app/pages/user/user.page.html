@@ -1,0 +1,245 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<p-card
+  styleClass="auth-card auth-card--premium"
+  [style]="{ width: '980px', maxWidth: '96vw' }"
+>
+  <ng-template pTemplate="header">
+    <div class="auth-head">
+      <div class="auth-title">Users</div>
+      <div class="auth-subtitle">CRUD usando demo_users del registro</div>
+    </div>
+  </ng-template>
+
+  <div class="auth-body">
+    <p-toolbar>
+      <ng-template pTemplate="start">
+        <button
+          pButton
+          type="button"
+          icon="pi pi-plus"
+          label="Nuevo"
+          class="p-button-success"
+          (click)="openCreate()"
+        ></button>
+      </ng-template>
+
+      <ng-template pTemplate="end">
+        <span class="p-input-icon-left w-full auth-input" style="max-width: 320px;">
+          <i class="pi pi-search"></i>
+          <input
+            pInputText
+            type="text"
+            class="w-full"
+            [(ngModel)]="q"
+            placeholder="Buscar..."
+          />
+        </span>
+      </ng-template>
+    </p-toolbar>
+
+    <div style="margin-top: 12px;">
+      <p-table
+        [value]="users"
+        [loading]="loading"
+        [paginator]="true"
+        [rows]="8"
+        [rowsPerPageOptions]="[8, 16, 32]"
+        [globalFilterFields]="['username', 'email', 'fullName', 'address', 'phone']"
+        [filters]="{ global: { value: q, matchMode: 'contains' } }"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 18%;">Usuario</th>
+            <th style="width: 22%;">Nombre</th>
+            <th>Email</th>
+            <th style="width: 16%;">Teléfono</th>
+            <th style="width: 200px; text-align: right;">Acciones</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-u>
+          <tr>
+            <td>
+              <div style="font-weight: 800;">{{ u.username }}</div>
+              <div style="font-size: 12px; opacity: 0.7;">
+                {{ u.createdAt | date: "short" }}
+              </div>
+            </td>
+
+            <td>{{ u.fullName }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.phone }}</td>
+
+            <td style="text-align: right; white-space: nowrap;">
+              <button
+                pButton
+                type="button"
+                icon="pi pi-eye"
+                class="p-button-text"
+                (click)="openView(u)"
+              ></button>
+
+              <button
+                pButton
+                type="button"
+                icon="pi pi-pencil"
+                class="p-button-text"
+                (click)="openEdit(u)"
+              ></button>
+
+              <button
+                pButton
+                type="button"
+                icon="pi pi-trash"
+                class="p-button-text p-button-danger"
+                (click)="askDelete(u)"
+              ></button>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 18px; opacity: 0.7;">
+              No hay usuarios.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</p-card>
+
+<p-dialog
+  [(visible)]="dialogOpen"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '720px', maxWidth: '95vw' }"
+  [header]="editingUsername ? 'Editar usuario' : 'Nuevo usuario'"
+>
+  <div class="p-fluid formgrid grid">
+    <div class="field col-12 md:col-6">
+      <label>Usuario</label>
+      <span class="p-input-icon-left w-full auth-input">
+        <i class="pi pi-user"></i>
+        <input pInputText class="w-full" [(ngModel)]="form.username" placeholder="Usuario" />
+      </span>
+    </div>
+
+    <div class="field col-12 md:col-6">
+      <label>Email</label>
+      <span class="p-input-icon-left w-full auth-input">
+        <i class="pi pi-envelope"></i>
+        <input pInputText class="w-full" [(ngModel)]="form.email" placeholder="correo@ejemplo.com" />
+      </span>
+    </div>
+
+    <div class="field col-12">
+      <label>Nombre completo</label>
+      <span class="p-input-icon-left w-full auth-input">
+        <i class="pi pi-id-card"></i>
+        <input pInputText class="w-full" [(ngModel)]="form.fullName" placeholder="Nombre completo" />
+      </span>
+    </div>
+
+    <div class="field col-12">
+      <label>Dirección</label>
+      <span class="p-input-icon-left w-full auth-input">
+        <i class="pi pi-map-marker"></i>
+        <input pInputText class="w-full" [(ngModel)]="form.address" placeholder="Dirección" />
+      </span>
+    </div>
+
+    <div class="field col-12 md:col-6">
+      <label>Teléfono</label>
+      <span class="p-input-icon-left w-full auth-input">
+        <i class="pi pi-phone"></i>
+        <input pInputText class="w-full" [(ngModel)]="form.phone" placeholder="4421234567" />
+      </span>
+    </div>
+
+    <div class="field col-12 md:col-6">
+      <label>Fecha de nacimiento</label>
+      <span class="p-input-icon-left w-full auth-input">
+        <i class="pi pi-calendar"></i>
+        <input pInputText class="w-full" [(ngModel)]="form.birthDate" placeholder="YYYY-MM-DD" />
+      </span>
+    </div>
+
+    <div class="field col-12">
+      <label>Contraseña</label>
+      <span class="p-input-icon-left w-full auth-input">
+        <i class="pi pi-lock"></i>
+        <input pInputText class="w-full" [(ngModel)]="form.password" placeholder="Contraseña" />
+      </span>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button
+      pButton
+      type="button"
+      class="p-button-text"
+      label="Cancelar"
+      (click)="dialogOpen = false"
+    ></button>
+
+    <button
+      pButton
+      type="button"
+      class="p-button-primary"
+      icon="pi pi-check"
+      label="Guardar"
+      (click)="save()"
+    ></button>
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  [(visible)]="viewOpen"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '720px', maxWidth: '95vw' }"
+  header="Detalle"
+>
+  <div *ngIf="selected" class="p-fluid">
+    <div class="field">
+      <label style="opacity: 0.7;">Usuario</label>
+      <div style="font-weight: 800;">{{ selected.username }}</div>
+    </div>
+
+    <div class="field" style="margin-top: 10px;">
+      <label style="opacity: 0.7;">Nombre completo</label>
+      <div style="font-weight: 700;">{{ selected.fullName }}</div>
+    </div>
+
+    <div class="field" style="margin-top: 10px;">
+      <label style="opacity: 0.7;">Email</label>
+      <div style="font-weight: 700;">{{ selected.email }}</div>
+    </div>
+
+    <div class="field" style="margin-top: 10px;">
+      <label style="opacity: 0.7;">Teléfono</label>
+      <div style="font-weight: 700;">{{ selected.phone }}</div>
+    </div>
+
+    <div class="field" style="margin-top: 10px;">
+      <label style="opacity: 0.7;">Dirección</label>
+      <div style="font-weight: 700;">{{ selected.address }}</div>
+    </div>
+
+    <div class="field" style="margin-top: 10px;">
+      <label style="opacity: 0.7;">Nacimiento</label>
+      <div style="font-weight: 700;">{{ selected.birthDate }}</div>
+    </div>
+
+    <div class="field" style="margin-top: 10px;">
+      <label style="opacity: 0.7;">Creado</label>
+      <div style="font-weight: 700;">{{ selected.createdAt | date: "medium" }}</div>
+    </div>
+  </div>
+</p-dialog>

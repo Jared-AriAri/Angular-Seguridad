@@ -1,0 +1,41 @@
+<p-splitter [style]="{ height: '100vh' }" [panelSizes]="[22, 78]">
+  <ng-template pTemplate="panel">
+    <p-panel [showHeader]="false">
+      <ng-template pTemplate="content">
+        <div class="sidebar-inner">
+          <div class="brand">
+            <div class="title">{{ projectName }}</div>
+            <p-tag [value]="'API ' + apiVersion" severity="info"></p-tag>
+          </div>
+
+          <p-divider></p-divider>
+
+          <p-menu [model]="menuItems"></p-menu>
+
+          <div class="spacer"></div>
+
+          <button
+            pButton
+            type="button"
+            class="p-button-danger p-button-outlined"
+            label="Salir"
+            icon="pi pi-sign-out"
+            (click)="logout()"
+          ></button>
+
+          <div class="meta">
+            <small>Versión API: {{ apiVersion }}</small>
+          </div>
+        </div>
+      </ng-template>
+    </p-panel>
+  </ng-template>
+
+  <ng-template pTemplate="panel">
+    <p-panel [showHeader]="false">
+      <ng-template pTemplate="content">
+        <router-outlet></router-outlet>
+      </ng-template>
+    </p-panel>
+  </ng-template>
+</p-splitter>

@@ -1,8 +1,37 @@
-<p-card header="Landing Page">
-  <p>PrimeNG + Router funcionando ✅</p>
+<p-card
+  styleClass="auth-card auth-card--premium"
+  [style]="{ width: '520px', maxWidth: '94vw' }"
+>
+  <ng-template pTemplate="header">
+    <div class="auth-head">
+      <div class="auth-title">Bienvenido</div>
+      <div class="auth-subtitle">PrimeNG + Router funcionando correctamente</div>
+    </div>
+  </ng-template>
 
-  <div style="display:flex; gap:12px; margin-top:12px;">
-    <button pButton label="Login" icon="pi pi-sign-in" routerLink="/login"></button>
-    <button pButton label="Register" icon="pi pi-user-plus" severity="success" routerLink="/register"></button>
+  <div class="auth-body">
+    <div class="p-fluid formgrid grid">
+      <div class="col-12">
+        <button
+          pButton
+          type="button"
+          label="Iniciar sesión"
+          icon="pi pi-sign-in"
+          class="w-full auth-cta auth-cta--premium"
+          routerLink="/login"
+        ></button>
+      </div>
+
+      <div class="col-12">
+        <button
+          pButton
+          type="button"
+          label="Crear cuenta"
+          icon="pi pi-user-plus"
+          class="w-full p-button-outlined"
+          routerLink="/register"
+        ></button>
+      </div>
+    </div>
   </div>
 </p-card>

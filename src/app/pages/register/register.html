@@ -1,66 +1,211 @@
-<div class="auth">
-  <p-card header="Registro">
-    <div class="p-fluid">
-      <div class="field">
-        <label>Usuario</label>
-        <input pInputText [(ngModel)]="username" />
+<p-card [style]="{ width: '640px', maxWidth: '94vw' }" styleClass="auth-card auth-card--premium">
+  <ng-template pTemplate="header">
+    <div class="auth-head">
+      <div class="auth-header-top">
+        <button
+          pButton
+          type="button"
+          icon="pi pi-arrow-left"
+          class="p-button-text auth-back-btn"
+          routerLink="/"
+        ></button>
+
+        <div class="auth-badges">
+          <div class="badge">
+            <i class="pi pi-shield"></i>
+            <span>Registro seguro</span>
+          </div>
+          <div class="badge badge--soft">
+            <i class="pi pi-lock"></i>
+            <span>Datos cifrados</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-title">Crea tu cuenta</div>
+      <div class="auth-subtitle">Completa tus datos para continuar</div>
+    </div>
+  </ng-template>
+
+  <div class="auth-body">
+    <div class="p-fluid formgrid grid">
+      <div class="field col-12 md:col-6">
+        <label for="username">Usuario</label>
+        <span class="p-input-icon-left w-full auth-input">
+          <i class="pi pi-user"></i>
+          <input
+            id="username"
+            pInputText
+            class="w-full"
+            [(ngModel)]="username"
+            (ngModelChange)="clearError('username')"
+            placeholder="Tu usuario"
+          />
+        </span>
         <p-message *ngIf="submitted && errors.username" severity="error" [text]="errors.username"></p-message>
       </div>
 
-      <div class="field">
-        <label>Email</label>
-        <input pInputText [(ngModel)]="email" />
+      <div class="field col-12 md:col-6">
+        <label for="email">Email</label>
+        <span class="p-input-icon-left w-full auth-input">
+          <i class="pi pi-envelope"></i>
+          <input
+            id="email"
+            pInputText
+            type="email"
+            class="w-full"
+            [(ngModel)]="email"
+            (ngModelChange)="clearError('email')"
+            placeholder="correo@ejemplo.com"
+          />
+        </span>
         <p-message *ngIf="submitted && errors.email" severity="error" [text]="errors.email"></p-message>
       </div>
 
-      <div class="field">
-        <label>Nombre completo</label>
-        <input pInputText [(ngModel)]="fullName" />
+      <div class="field col-12">
+        <label for="fullName">Nombre completo</label>
+        <span class="p-input-icon-left w-full auth-input">
+          <i class="pi pi-id-card"></i>
+          <input
+            id="fullName"
+            pInputText
+            class="w-full"
+            [(ngModel)]="fullName"
+            (ngModelChange)="clearError('fullName')"
+            placeholder="Tu nombre completo"
+          />
+        </span>
         <p-message *ngIf="submitted && errors.fullName" severity="error" [text]="errors.fullName"></p-message>
       </div>
 
-      <div class="field">
-        <label>Dirección</label>
-        <input pInputText [(ngModel)]="address" />
+      <div class="field col-12">
+        <label for="address">Dirección</label>
+        <span class="p-input-icon-left w-full auth-input">
+          <i class="pi pi-map-marker"></i>
+          <input
+            id="address"
+            pInputText
+            class="w-full"
+            [(ngModel)]="address"
+            (ngModelChange)="clearError('address')"
+            placeholder="Calle, número, ciudad"
+          />
+        </span>
         <p-message *ngIf="submitted && errors.address" severity="error" [text]="errors.address"></p-message>
       </div>
 
-      <div class="field">
-        <label>Teléfono (solo números)</label>
-        <input pInputText [ngModel]="phone" (ngModelChange)="onPhoneInput($event)" />
+      <div class="field col-12 md:col-6">
+        <label for="phone">Teléfono</label>
+        <span class="p-input-icon-left w-full auth-input">
+          <i class="pi pi-phone"></i>
+          <p-inputMask
+            id="phone"
+            styleClass="w-full auth-input"
+            inputStyleClass="w-full"
+            mask="999 999 9999"
+            [autoClear]="false"
+            [unmask]="true"
+            [ngModel]="phone"
+            (ngModelChange)="onPhoneInput($event)"
+            placeholder="442 123 4567"
+          ></p-inputMask>
+        </span>
         <p-message *ngIf="submitted && errors.phone" severity="error" [text]="errors.phone"></p-message>
       </div>
 
-      <div class="field">
-        <label>Fecha de nacimiento</label>
-        <input pInputText type="date" [(ngModel)]="birthDate" />
+      <div class="field col-12 md:col-6">
+        <label for="birthDate">Fecha de nacimiento</label>
+        <p-datepicker
+          inputId="birthDate"
+          styleClass="w-full auth-input"
+          inputStyleClass="w-full"
+          [(ngModel)]="birthDate"
+          (ngModelChange)="clearError('birthDate')"
+          showIcon
+          iconDisplay="input"
+          dateFormat="yy-mm-dd"
+          [touchUI]="false"
+          [showButtonBar]="true"
+          [appendTo]="'body'"
+          panelStyleClass="auth-datepicker-panel"
+          placeholder="YYYY-MM-DD"
+        ></p-datepicker>
         <p-message *ngIf="submitted && errors.birthDate" severity="error" [text]="errors.birthDate"></p-message>
       </div>
 
-      <div class="field">
-        <label>Contraseña</label>
-        <input pInputText type="password" [(ngModel)]="password" />
-        <small>Mínimo 10 caracteres y al menos 1 símbolo especial: ! @ # $ % ^ & * ( )</small>
+      <div class="field col-12 md:col-6">
+        <label for="password">Contraseña</label>
+        <p-password
+          id="password"
+          styleClass="w-full auth-input auth-password"
+          inputStyleClass="w-full"
+          [(ngModel)]="password"
+          (ngModelChange)="clearError('password')"
+          [toggleMask]="true"
+          placeholder="Tu contraseña"
+        ></p-password>
+        <small class="hint">
+          Mín. 10 caracteres + 1 símbolo <span class="hint-mono">! @ # $ % ^ &amp; * ( )</span>
+        </small>
         <p-message *ngIf="submitted && errors.password" severity="error" [text]="errors.password"></p-message>
       </div>
 
-      <div class="field">
-        <label>Confirmar contraseña</label>
-        <input pInputText type="password" [(ngModel)]="confirmPassword" />
-        <p-message
-          *ngIf="submitted && errors.confirmPassword"
-          severity="error"
-          [text]="errors.confirmPassword"
-        ></p-message>
+      <div class="field col-12 md:col-6">
+        <label for="confirmPassword">Confirmar contraseña</label>
+        <p-password
+          id="confirmPassword"
+          styleClass="w-full auth-input auth-password"
+          inputStyleClass="w-full"
+          [(ngModel)]="confirmPassword"
+          (ngModelChange)="clearError('confirmPassword')"
+          [toggleMask]="true"
+          placeholder="Repite tu contraseña"
+        ></p-password>
+        <p-message *ngIf="submitted && errors.confirmPassword" severity="error" [text]="errors.confirmPassword"></p-message>
       </div>
 
-      <button pButton label="Registrar" icon="pi pi-user-plus" severity="success" (click)="submit()" [disabled]="submitted && !isValid"></button>
+      <div class="col-12 mt-2">
+        <button
+          pButton
+          type="button"
+          label="Crear cuenta"
+          icon="pi pi-user-plus"
+          class="w-full auth-cta auth-cta--premium"
+          (click)="submit()"
+        ></button>
 
-      <p-message *ngIf="success" severity="success" [text]="success"></p-message>
+        <div class="auth-meta">
+          <div class="auth-meta__item">
+            <i class="pi pi-check-circle"></i>
+            <span>Sin spam</span>
+          </div>
+          <div class="auth-meta__item">
+            <i class="pi pi-shield"></i>
+            <span>Privacidad primero</span>
+          </div>
+          <div class="auth-meta__item">
+            <i class="pi pi-clock"></i>
+            <span>Toma 1 min</span>
+          </div>
+        </div>
+      </div>
 
-      <div class="link">
-        <a routerLink="/login">Ya tengo cuenta → Login</a>
+      <div class="col-12" *ngIf="success">
+        <p-message severity="success" [text]="success"></p-message>
+      </div>
+
+      <div class="col-12">
+        <div class="auth-footer">
+          <div class="auth-footer__left">
+            <span class="muted">¿Ya tienes cuenta?</span>
+            <a routerLink="/login" class="auth-link">Inicia sesión</a>
+          </div>
+          <div class="auth-footer__right">
+            <i class="pi pi-lock"></i>
+            <span>Protegemos tus datos</span>
+          </div>
+        </div>
       </div>
     </div>
-  </p-card>
-</div>
+  </div>
+</p-card>
