@@ -21,6 +21,7 @@ import {
   ADMIN_DEFAULT_PERMISSIONS,
   normalizePermissions,
 } from "./user.model";
+import { AuthContextService } from "../../shared/auth-context.service";
 
 type FormState = {
   username: string;
@@ -86,8 +87,13 @@ export class UserPage implements OnInit, OnDestroy {
 
   constructor(
     private toast: MessageService,
-    private confirm: ConfirmationService
+    private confirm: ConfirmationService,
+    private authContext: AuthContextService
   ) {}
+
+  hasPermission(permission: Permission): boolean {
+    return this.authContext.hasPermission(permission);
+  }
 
   ngOnInit() {
     this.refresh();
@@ -152,6 +158,7 @@ export class UserPage implements OnInit, OnDestroy {
   }
 
   openCreate() {
+    if (!this.hasPermission('user:create')) return;
     this.editingUsername = "";
     this.form = {
       username: "",
@@ -167,6 +174,7 @@ export class UserPage implements OnInit, OnDestroy {
   }
 
   openCreateAdmin() {
+    if (!this.hasPermission('user:create')) return;
     this.editingUsername = "";
     this.form = {
       username: "",
@@ -190,6 +198,7 @@ export class UserPage implements OnInit, OnDestroy {
   }
 
   openEdit(user: UserItem) {
+    if (!this.hasPermission('user:edit')) return;
     this.editingUsername = user.username;
     this.form = {
       username: user.username,
@@ -205,6 +214,7 @@ export class UserPage implements OnInit, OnDestroy {
   }
 
   openView(user: UserItem) {
+    if (!this.hasPermission('user:view')) return;
     this.selected = {
       ...user,
       permissions: [...user.permissions],
@@ -213,6 +223,10 @@ export class UserPage implements OnInit, OnDestroy {
   }
 
   save() {
+    const isCreating = !this.editingUsername;
+    if (isCreating && !this.hasPermission('user:create')) return;
+    if (!isCreating && !this.hasPermission('user:edit')) return;
+
     const users = this.loadUsers();
 
     const username = this.trim(this.form.username);
@@ -358,6 +372,7 @@ export class UserPage implements OnInit, OnDestroy {
         phone,
         birthDate,
         createdAt: new Date().toISOString(),
+        role: "member",
         permissions,
       });
 
@@ -374,6 +389,7 @@ export class UserPage implements OnInit, OnDestroy {
   }
 
   askDelete(user: UserItem) {
+    if (!this.hasPermission('user:delete')) return;
     this.confirm.confirm({
       header: "Eliminar usuario",
       message: '¿Seguro que deseas eliminar "' + user.username + '"?',

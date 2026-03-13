@@ -1,4 +1,11 @@
-import { Component, EventEmitter, Input, Output } from "@angular/core";
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  OnChanges,
+  SimpleChanges,
+} from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { DialogModule } from "primeng/dialog";
@@ -29,9 +36,9 @@ const GROUP_MEMBERS_STORAGE_KEY = "group_members";
   selector: "app-group-members-modal",
   standalone: true,
   imports: [CommonModule, FormsModule, DialogModule, SelectModule, ButtonModule],
-  templateUrl: "./group-members-modal.html"
+  templateUrl: "./group-members-modal.html",
 })
-export class GroupMembersModalComponent {
+export class GroupMembersModalComponent implements OnChanges {
   @Input() visible = false;
   @Input() groupId = "";
   @Output() closeModal = new EventEmitter<void>();
@@ -41,12 +48,23 @@ export class GroupMembersModalComponent {
   userOptions: { label: string; value: string }[] = [];
   selectedUsername = "";
 
-  ngOnChanges() {
-    this.loadUsers();
-    this.loadMembers();
+  ngOnChanges(changes: SimpleChanges) {
+    const visibleChanged = !!changes["visible"];
+    const groupChanged = !!changes["groupId"];
+
+    if ((visibleChanged && this.visible) || groupChanged) {
+      this.loadUsers();
+      this.loadMembers();
+      this.buildUserOptions();
+    }
+
+    if (visibleChanged && !this.visible) {
+      this.selectedUsername = "";
+    }
   }
 
   close() {
+    this.selectedUsername = "";
     this.closeModal.emit();
   }
 
@@ -54,13 +72,8 @@ export class GroupMembersModalComponent {
     try {
       const raw = localStorage.getItem(USERS_STORAGE_KEY);
       this.users = raw ? (JSON.parse(raw) as StoredUser[]) : [];
-      this.userOptions = this.users.map((user) => ({
-        label: `${user.fullName || user.username} (${user.email})`,
-        value: user.username
-      }));
     } catch {
       this.users = [];
-      this.userOptions = [];
     }
   }
 
@@ -74,24 +87,53 @@ export class GroupMembersModalComponent {
     }
   }
 
+  buildUserOptions() {
+    const memberSet = new Set(
+      this.members.map((member) => member.username.trim().toLowerCase())
+    );
+
+    this.userOptions = this.users
+      .filter((user) => !memberSet.has(user.username.trim().toLowerCase()))
+      .map((user) => ({
+        label: `${user.fullName || user.username} (${user.email})`,
+        value: user.username,
+      }));
+  }
+
   saveMembers(nextMembers: GroupMember[]) {
-    const raw = localStorage.getItem(GROUP_MEMBERS_STORAGE_KEY);
-    const all = raw ? JSON.parse(raw) : {};
-    all[this.groupId] = nextMembers;
-    localStorage.setItem(GROUP_MEMBERS_STORAGE_KEY, JSON.stringify(all));
-    this.members = nextMembers;
+    try {
+      const raw = localStorage.getItem(GROUP_MEMBERS_STORAGE_KEY);
+      const all = raw ? JSON.parse(raw) : {};
+      all[this.groupId] = nextMembers;
+      localStorage.setItem(GROUP_MEMBERS_STORAGE_KEY, JSON.stringify(all));
+      this.members = nextMembers;
+      this.buildUserOptions();
+    } catch {
+      this.members = nextMembers;
+      this.buildUserOptions();
+    }
   }
 
   addMember() {
     if (!this.selectedUsername || !this.groupId) return;
 
-    const exists = this.members.some((member) => member.username === this.selectedUsername);
+    const exists = this.members.some(
+      (member) =>
+        member.username.trim().toLowerCase() ===
+        this.selectedUsername.trim().toLowerCase()
+    );
+
     if (exists) {
       this.selectedUsername = "";
       return;
     }
 
-    const user = this.users.find((u) => u.username === this.selectedUsername);
+    const user = this.users.find(
+      (u) =>
+        u.username.trim().toLowerCase() ===
+        this.selectedUsername.trim().toLowerCase()
+    );
+
     if (!user) return;
 
     const nextMembers = [
@@ -99,8 +141,8 @@ export class GroupMembersModalComponent {
       {
         username: user.username,
         fullName: user.fullName,
-        email: user.email
-      }
+        email: user.email,
+      },
     ];
 
     this.saveMembers(nextMembers);
@@ -108,7 +150,14 @@ export class GroupMembersModalComponent {
   }
 
   removeMember(username: string) {
-    const nextMembers = this.members.filter((member) => member.username !== username);
+    const nextMembers = this.members.filter(
+      (member) =>
+        member.username.trim().toLowerCase() !== username.trim().toLowerCase()
+    );
+
     this.saveMembers(nextMembers);
+    if (this.selectedUsername.trim().toLowerCase() === username.trim().toLowerCase()) {
+      this.selectedUsername = "";
+    }
   }
 }

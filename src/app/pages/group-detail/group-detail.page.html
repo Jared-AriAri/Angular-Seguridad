@@ -13,6 +13,10 @@
       </div>
 
       <div class="group-page-actions">
+        <div class="dashboard-badge" style="background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+          <i class="pi pi-bolt"></i> LLM Model: Antigravity
+        </div>
+
         <p-selectButton
           *ngIf="hasPermission('ticket:view')"
           [options]="viewOptions"
@@ -50,14 +54,41 @@
   </ng-template>
 
   <div class="group-page-content" *ngIf="hasPermission('ticket:view'); else noTicketPermission">
+    <!-- Dashboard Summary -->
+    <div class="dashboard-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+      <p-card [style]="{ background: '#f8fafc', border: '1px solid #e2e8f0', boxShadow: 'none' }">
+        <div style="color: #64748b; font-size: 0.9rem; font-weight: 600;">Total Tickets</div>
+        <div style="font-size: 2rem; font-weight: 800; color: #0f172a;">{{ totalTickets }}</div>
+      </p-card>
+      <p-card [style]="{ background: '#fffbeb', border: '1px solid #fde68a', boxShadow: 'none' }">
+        <div style="color: #d97706; font-size: 0.9rem; font-weight: 600;">Pendientes</div>
+        <div style="font-size: 2rem; font-weight: 800; color: #d97706;">{{ pendingTickets }}</div>
+      </p-card>
+      <p-card [style]="{ background: '#f0fdf4', border: '1px solid #bbf7d0', boxShadow: 'none' }">
+        <div style="color: #16a34a; font-size: 0.9rem; font-weight: 600;">Completados</div>
+        <div style="font-size: 2rem; font-weight: 800; color: #16a34a;">{{ completedTickets }}</div>
+      </p-card>
+    </div>
+
+    <!-- Quick Filters -->
+    <div class="dashboard-filters" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+      <button pButton type="button" label="Todos" [class]="currentFilter === 'all' ? 'p-button-primary' : 'p-button-outlined'" (click)="applyFilter('all')"></button>
+      <button pButton type="button" label="Mis tickets" [class]="currentFilter === 'mine' ? 'p-button-primary' : 'p-button-outlined'" (click)="applyFilter('mine')"></button>
+      <button pButton type="button" label="Sin asignar" [class]="currentFilter === 'unassigned' ? 'p-button-primary' : 'p-button-outlined'" (click)="applyFilter('unassigned')"></button>
+      <button pButton type="button" label="Prioridad Alta" [class]="currentFilter === 'high_priority' ? 'p-button-primary' : 'p-button-outlined'" (click)="applyFilter('high_priority')"></button>
+    </div>
+
     <app-ticket-kanban
       *ngIf="viewMode === 'kanban'"
-      [tickets]="tickets"
+      [tickets]="filteredTickets"
+      (statusChange)="onTicketStatusChange($event)"
+      (ticketClick)="openTicketDetail($event)"
     ></app-ticket-kanban>
 
     <app-ticket-list
       *ngIf="viewMode === 'list'"
-      [tickets]="tickets"
+      [tickets]="filteredTickets"
+      (ticketClick)="openTicketDetail($event)"
     ></app-ticket-list>
   </div>
 
@@ -79,6 +110,7 @@
   *ngIf="hasPermission('ticket:view')"
   [visible]="showDetailModal"
   [ticket]="selectedTicket"
+  [canEdit]="selectedTicket ? canEditTicket(selectedTicket) : false"
   (closeModal)="closeTicketDetail()"
 ></app-ticket-detail-modal>
 

@@ -1,10 +1,7 @@
 <p-toast></p-toast>
 <p-confirmDialog></p-confirmDialog>
 
-<p-card
-  styleClass="auth-card auth-card--premium"
-  [style]="{ width: '980px', maxWidth: '96vw' }"
->
+<p-card styleClass="auth-card auth-card--premium" [style]="{ width: '980px', maxWidth: '96vw' }">
   <ng-template pTemplate="header">
     <div class="auth-head">
       <div class="auth-title">Users</div>
@@ -16,50 +13,25 @@
     <p-toolbar>
       <ng-template pTemplate="start">
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <button
-            pButton
-            type="button"
-            icon="pi pi-plus"
-            label="Nuevo"
-            class="p-button-success"
-            (click)="openCreate()"
-          ></button>
+          <button *ngIf="hasPermission('user:create')" pButton type="button" icon="pi pi-plus" label="Nuevo"
+            class="p-button-success" (click)="openCreate()"></button>
 
-          <button
-            pButton
-            type="button"
-            icon="pi pi-shield"
-            label="Nuevo admin"
-            class="p-button-warning"
-            (click)="openCreateAdmin()"
-          ></button>
+          <button *ngIf="hasPermission('user:create')" pButton type="button" icon="pi pi-shield" label="Nuevo admin"
+            class="p-button-warning" (click)="openCreateAdmin()"></button>
         </div>
       </ng-template>
 
       <ng-template pTemplate="end">
         <span class="p-input-icon-left w-full auth-input" style="max-width: 320px;">
           <i class="pi pi-search"></i>
-          <input
-            pInputText
-            type="text"
-            class="w-full"
-            [(ngModel)]="q"
-            placeholder="Buscar..."
-          />
+          <input pInputText type="text" class="w-full" [(ngModel)]="q" placeholder="Buscar..." />
         </span>
       </ng-template>
     </p-toolbar>
 
     <div style="margin-top: 12px;">
-      <p-table
-        [value]="users"
-        [loading]="loading"
-        [paginator]="true"
-        [rows]="8"
-        [rowsPerPageOptions]="[8, 16, 32]"
-        [globalFilterFields]="['username', 'email', 'fullName', 'address', 'phone']"
-        [filters]="{ global: { value: q, matchMode: 'contains' } }"
-      >
+      <p-table [value]="filteredUsers" [loading]="loading" [paginator]="true" [rows]="8"
+        [rowsPerPageOptions]="[8, 16, 32]">
         <ng-template pTemplate="header">
           <tr>
             <th style="width: 16%;">Usuario</th>
@@ -83,37 +55,19 @@
             <td>{{ u.fullName }}</td>
             <td>{{ u.email }}</td>
             <td>
-              <p-tag
-                [value]="permissionCountLabel(u)"
-                severity="info"
-              ></p-tag>
+              <p-tag [value]="permissionCountLabel(u)" severity="info"></p-tag>
             </td>
             <td>{{ u.phone }}</td>
 
             <td style="text-align: right; white-space: nowrap;">
-              <button
-                pButton
-                type="button"
-                icon="pi pi-eye"
-                class="p-button-text"
-                (click)="openView(u)"
-              ></button>
+              <button *ngIf="hasPermission('user:view')" pButton type="button" icon="pi pi-eye" class="p-button-text"
+                (click)="openView(u)"></button>
 
-              <button
-                pButton
-                type="button"
-                icon="pi pi-pencil"
-                class="p-button-text"
-                (click)="openEdit(u)"
-              ></button>
+              <button *ngIf="hasPermission('user:edit')" pButton type="button" icon="pi pi-pencil" class="p-button-text"
+                (click)="openEdit(u)"></button>
 
-              <button
-                pButton
-                type="button"
-                icon="pi pi-trash"
-                class="p-button-text p-button-danger"
-                (click)="askDelete(u)"
-              ></button>
+              <button *ngIf="hasPermission('user:delete')" pButton type="button" icon="pi pi-trash"
+                class="p-button-text p-button-danger" (click)="askDelete(u)"></button>
             </td>
           </tr>
         </ng-template>
@@ -130,14 +84,8 @@
   </div>
 </p-card>
 
-<p-dialog
-  [(visible)]="dialogOpen"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: '820px', maxWidth: '95vw' }"
-  [header]="editingUsername ? 'Editar usuario' : 'Nuevo usuario'"
->
+<p-dialog [(visible)]="dialogOpen" [modal]="true" [draggable]="false" [resizable]="false"
+  [style]="{ width: '820px', maxWidth: '95vw' }" [header]="editingUsername ? 'Editar usuario' : 'Nuevo usuario'">
   <div class="p-fluid formgrid grid">
     <div class="field col-12 md:col-6">
       <label>Usuario</label>
@@ -175,16 +123,15 @@
       <label>Teléfono</label>
       <span class="p-input-icon-left w-full auth-input">
         <i class="pi pi-phone"></i>
-        <input pInputText class="w-full" [(ngModel)]="form.phone" placeholder="4421234567" />
+        <input pInputText class="w-full" [(ngModel)]="form.phone" maxlength="10" inputmode="numeric" pattern="[0-9]*"
+          placeholder="4421234567" (input)="form.phone = (form.phone || '').replace(/\D/g, '').slice(0, 10)" />
       </span>
     </div>
 
     <div class="field col-12 md:col-6">
       <label>Fecha de nacimiento</label>
-      <span class="p-input-icon-left w-full auth-input">
-        <i class="pi pi-calendar"></i>
-        <input pInputText class="w-full" [(ngModel)]="form.birthDate" placeholder="YYYY-MM-DD" />
-      </span>
+      <p-datepicker [(ngModel)]="form.birthDate" [showIcon]="true" [showButtonBar]="true" dateFormat="yy-mm-dd"
+        placeholder="Selecciona una fecha" inputStyleClass="w-full" styleClass="w-full auth-input"></p-datepicker>
     </div>
 
     <div class="field col-12">
@@ -195,73 +142,40 @@
       </span>
     </div>
 
-    <div class="field col-12">
+    <div class="field col-12" *ngIf="isSuperAdmin()">
       <label>Preset de permisos</label>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button
-          pButton
-          type="button"
-          label="Member"
-          class="p-button-outlined p-button-sm"
-          (click)="setMemberPreset()"
-        ></button>
+        <button pButton type="button" label="Member" class="p-button-outlined p-button-sm"
+          (click)="setMemberPreset()"></button>
 
-        <button
-          pButton
-          type="button"
-          label="Admin"
-          class="p-button-warning p-button-sm"
-          (click)="setAdminPreset()"
-        ></button>
+        <button pButton type="button" label="Admin" class="p-button-warning p-button-sm"
+          (click)="setAdminPreset()"></button>
       </div>
     </div>
 
-    <div class="field col-12">
+    <div class="field col-12" *ngIf="isSuperAdmin()">
       <label>Permisos</label>
-      <div
-        style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px;"
-      >
-        <button
-          *ngFor="let option of permissionOptions"
-          pButton
-          type="button"
-          class="p-button-sm"
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px;">
+        <button *ngFor="let option of permissionOptions" pButton type="button" class="p-button-sm"
           [class]="hasSelectedPermission(option.value) ? 'p-button-primary' : 'p-button-outlined'"
-          [label]="option.label"
-          (click)="togglePermission(option.value)"
-        ></button>
+          [label]="option.label" (click)="togglePermission(option.value)"></button>
       </div>
+    </div>
+
+    <div class="field col-12" *ngIf="!isSuperAdmin()">
+      <p-message severity="info" text="Solo el superadmin puede asignar permisos manualmente."></p-message>
     </div>
   </div>
 
   <ng-template pTemplate="footer">
-    <button
-      pButton
-      type="button"
-      class="p-button-text"
-      label="Cancelar"
-      (click)="dialogOpen = false"
-    ></button>
+    <button pButton type="button" class="p-button-text" label="Cancelar" (click)="dialogOpen = false"></button>
 
-    <button
-      pButton
-      type="button"
-      class="p-button-primary"
-      icon="pi pi-check"
-      label="Guardar"
-      (click)="save()"
-    ></button>
+    <button pButton type="button" class="p-button-primary" icon="pi pi-check" label="Guardar" (click)="save()"></button>
   </ng-template>
 </p-dialog>
 
-<p-dialog
-  [(visible)]="viewOpen"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: '820px', maxWidth: '95vw' }"
-  header="Detalle"
->
+<p-dialog [(visible)]="viewOpen" [modal]="true" [draggable]="false" [resizable]="false"
+  [style]="{ width: '820px', maxWidth: '95vw' }" header="Detalle">
   <div *ngIf="selected" class="p-fluid">
     <div class="field">
       <label style="opacity: 0.7;">Usuario</label>
@@ -296,11 +210,8 @@
     <div class="field" style="margin-top: 10px;">
       <label style="opacity: 0.7;">Permisos</label>
       <div style="display:flex; flex-wrap:wrap; gap:8px;">
-        <p-tag
-          *ngFor="let permission of selected.permissions"
-          [value]="permissionLabel(permission)"
-          [severity]="permissionSeverity(permission)"
-        ></p-tag>
+        <p-tag *ngFor="let permission of selected.permissions" [value]="permissionLabel(permission)"
+          [severity]="permissionSeverity(permission)"></p-tag>
       </div>
     </div>
 

@@ -218,10 +218,6 @@ export class GroupPage implements OnInit {
     const currentUser = this.authContext.getCurrentUser();
     if (!currentUser) return [];
 
-    if (currentUser.role === "admin" || currentUser.role === "superadmin") {
-      return groups;
-    }
-
     const membershipMap = this.loadGroupMembers();
 
     return groups.filter((group) => {
@@ -237,10 +233,6 @@ export class GroupPage implements OnInit {
   private canAccessGroup(groupId: string) {
     const currentUser = this.authContext.getCurrentUser();
     if (!currentUser) return false;
-
-    if (currentUser.role === "admin" || currentUser.role === "superadmin") {
-      return true;
-    }
 
     const membershipMap = this.loadGroupMembers();
     const members = membershipMap[groupId] || [];

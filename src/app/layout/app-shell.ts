@@ -10,7 +10,6 @@ import { PanelModule } from "primeng/panel";
 import { SplitterModule } from "primeng/splitter";
 import { MenuModule } from "primeng/menu";
 
-import { CurrentUserInfoComponent } from "../shared/current-user-info/current-user-info";
 import { AuthContextService } from "../shared/auth-context.service";
 
 @Component({
@@ -26,7 +25,6 @@ import { AuthContextService } from "../shared/auth-context.service";
     PanelModule,
     SplitterModule,
     MenuModule,
-    CurrentUserInfoComponent,
   ],
   templateUrl: "./app-shell.html",
 })
@@ -40,7 +38,7 @@ export class AppShellComponent implements OnInit {
   constructor(
     private router: Router,
     private authContext: AuthContextService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.menuItems = this.buildMenu();
@@ -50,6 +48,7 @@ export class AppShellComponent implements OnInit {
     localStorage.removeItem("loggedIn");
     localStorage.removeItem("currentUser");
     localStorage.removeItem("currentUsername");
+    localStorage.removeItem("currentUserRole");
     this.router.navigateByUrl("/");
   }
 
@@ -65,6 +64,14 @@ export class AppShellComponent implements OnInit {
         label: "Home",
         icon: "pi pi-home",
         routerLink: "/app/home",
+      });
+    }
+
+    if (this.authContext.hasPermission("profile:view")) {
+      menu.push({
+        label: "Mi Perfil",
+        icon: "pi pi-id-card",
+        routerLink: "/app/profile",
       });
     }
 
@@ -117,7 +124,7 @@ export class AppShellComponent implements OnInit {
           parsed?.aiModel;
 
         if (value && String(value).trim()) return String(value);
-      } catch {}
+      } catch { }
     }
 
     return "No configurado";

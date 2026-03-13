@@ -19,6 +19,7 @@ import {
 } from "../user/user.model";
 
 const SPECIALS = /[!@#$%^&*()_\+\-=\[\]{};':",.<>\/\?\\|]/;
+const STORAGE_KEY = "demo_users";
 
 type RegisterErrors = {
   username?: string;
@@ -30,8 +31,6 @@ type RegisterErrors = {
   password?: string;
   confirmPassword?: string;
 };
-
-const STORAGE_KEY = "demo_users";
 
 @Component({
   selector: "app-register",
@@ -71,12 +70,18 @@ export class RegisterComponent {
     return String(v ?? "").trim();
   }
 
+  private normalizePhone(v: string) {
+    return String(v ?? "")
+      .replace(/\D/g, "")
+      .slice(0, 10);
+  }
+
   private isEmail(v: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(v);
   }
 
   private isPhone(v: string) {
-    return /^\d{10,15}$/.test(v);
+    return /^\d{10}$/.test(v);
   }
 
   private toISODate(d: Date | null) {
@@ -96,8 +101,8 @@ export class RegisterComponent {
     return age >= 18;
   }
 
-  onPhoneInput(v: string) {
-    this.phone = String(v ?? "").replace(/\D/g, "");
+  onPhoneInput(value: string) {
+    this.phone = this.normalizePhone(value);
     this.clearError("phone");
   }
 
@@ -112,6 +117,7 @@ export class RegisterComponent {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const users = raw ? (JSON.parse(raw) as UserItem[]) : [];
+
       return users.map((user: any) => {
         const role = normalizeRole(user);
         return {
@@ -135,22 +141,26 @@ export class RegisterComponent {
   private validate(): RegisterErrors {
     const e: RegisterErrors = {};
 
-    if (!this.trim(this.username)) e.username = "Usuario requerido.";
-    if (!this.trim(this.fullName)) e.fullName = "Nombre completo requerido.";
-    if (!this.trim(this.address)) e.address = "Dirección requerida.";
-
+    const username = this.trim(this.username);
+    const fullName = this.trim(this.fullName);
+    const address = this.trim(this.address);
     const mail = this.trim(this.email);
+    const phone = this.normalizePhone(this.phone);
+    const pass = this.password;
+
+    if (!username) e.username = "Usuario requerido.";
+    if (!fullName) e.fullName = "Nombre completo requerido.";
+    if (!address) e.address = "Dirección requerida.";
+
     if (!mail) e.email = "Email requerido.";
     else if (!this.isEmail(mail)) e.email = "Email inválido.";
 
-    const phone = this.trim(this.phone);
     if (!phone) e.phone = "Teléfono requerido.";
-    else if (!this.isPhone(phone)) e.phone = "Teléfono inválido: solo números (10–15).";
+    else if (!this.isPhone(phone)) e.phone = "El teléfono debe tener exactamente 10 dígitos.";
 
     if (!this.birthDate) e.birthDate = "Fecha de nacimiento requerida.";
     else if (!this.isAdult(this.birthDate)) e.birthDate = "Solo mayores de edad (18+).";
 
-    const pass = this.password;
     if (!pass) e.password = "Contraseña requerida.";
     else if (pass.length < 10) e.password = "Mínimo 10 caracteres.";
     else if (!SPECIALS.test(pass)) e.password = "Debe incluir al menos 1 símbolo especial.";
@@ -159,8 +169,8 @@ export class RegisterComponent {
     else if (this.confirmPassword !== this.password) e.confirmPassword = "Las contraseñas no coinciden.";
 
     const users = this.loadUsers();
-    const uNorm = this.trim(this.username).toLowerCase();
-    if (users.some((x) => (x.username ?? "").toLowerCase() === uNorm)) {
+    const usernameNorm = username.toLowerCase();
+    if (users.some((x) => (x.username ?? "").toLowerCase() === usernameNorm)) {
       e.username = "Ese usuario ya existe.";
     }
 
@@ -179,6 +189,7 @@ export class RegisterComponent {
   submit() {
     this.submitted = true;
     this.success = "";
+    this.phone = this.normalizePhone(this.phone);
 
     this.errors = this.validate();
     if (!this.isValid) return;
@@ -191,7 +202,7 @@ export class RegisterComponent {
       email: this.trim(this.email).toLowerCase(),
       fullName: this.trim(this.fullName),
       address: this.trim(this.address),
-      phone: this.trim(this.phone),
+      phone: this.normalizePhone(this.phone),
       birthDate: this.toISODate(this.birthDate),
       createdAt: new Date().toISOString(),
       role: "member",

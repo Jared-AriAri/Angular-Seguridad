@@ -1,8 +1,8 @@
-<div class="ticket-kanban-board">
+<div class="ticket-kanban-board" cdkDropListGroup>
   <div class="ticket-kanban-column">
     <div class="ticket-kanban-column-title">Pendiente</div>
-    <div class="ticket-kanban-stack">
-      <p-card *ngFor="let ticket of pending" styleClass="ticket-card">
+    <div cdkDropList [cdkDropListData]="pending" (cdkDropListDropped)="drop($event, 'pendiente')" class="ticket-kanban-stack">
+      <p-card *ngFor="let ticket of pending" cdkDrag styleClass="ticket-card" (click)="onTicketClick(ticket)" [style]="{'cursor': 'pointer'}">
         <div class="ticket-card-title">{{ ticket.title }}</div>
         <div class="ticket-card-text">{{ ticket.description }}</div>
         <div class="ticket-card-footer">
@@ -14,8 +14,8 @@
 
   <div class="ticket-kanban-column">
     <div class="ticket-kanban-column-title">En progreso</div>
-    <div class="ticket-kanban-stack">
-      <p-card *ngFor="let ticket of inProgress" styleClass="ticket-card">
+    <div cdkDropList [cdkDropListData]="inProgress" (cdkDropListDropped)="drop($event, 'en_progreso')" class="ticket-kanban-stack">
+      <p-card *ngFor="let ticket of inProgress" cdkDrag styleClass="ticket-card" (click)="onTicketClick(ticket)" [style]="{'cursor': 'pointer'}">
         <div class="ticket-card-title">{{ ticket.title }}</div>
         <div class="ticket-card-text">{{ ticket.description }}</div>
         <div class="ticket-card-footer">
@@ -27,8 +27,8 @@
 
   <div class="ticket-kanban-column">
     <div class="ticket-kanban-column-title">Revisión</div>
-    <div class="ticket-kanban-stack">
-      <p-card *ngFor="let ticket of review" styleClass="ticket-card">
+    <div cdkDropList [cdkDropListData]="review" (cdkDropListDropped)="drop($event, 'revision')" class="ticket-kanban-stack">
+      <p-card *ngFor="let ticket of review" cdkDrag styleClass="ticket-card" (click)="onTicketClick(ticket)" [style]="{'cursor': 'pointer'}">
         <div class="ticket-card-title">{{ ticket.title }}</div>
         <div class="ticket-card-text">{{ ticket.description }}</div>
         <div class="ticket-card-footer">
@@ -40,8 +40,8 @@
 
   <div class="ticket-kanban-column">
     <div class="ticket-kanban-column-title">Finalizado</div>
-    <div class="ticket-kanban-stack">
-      <p-card *ngFor="let ticket of done" styleClass="ticket-card">
+    <div cdkDropList [cdkDropListData]="done" (cdkDropListDropped)="drop($event, 'finalizado')" class="ticket-kanban-stack">
+      <p-card *ngFor="let ticket of done" cdkDrag styleClass="ticket-card" (click)="onTicketClick(ticket)" [style]="{'cursor': 'pointer'}">
         <div class="ticket-card-title">{{ ticket.title }}</div>
         <div class="ticket-card-text">{{ ticket.description }}</div>
         <div class="ticket-card-footer">

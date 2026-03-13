@@ -1,11 +1,5 @@
-<p-dialog
-  header="Crear ticket"
-  [(visible)]="visible"
-  [modal]="true"
-  [closable]="true"
-  [style]="{ width: '640px', maxWidth: '96vw' }"
-  (onHide)="close()"
->
+<p-dialog header="Crear ticket" [(visible)]="visible" [modal]="true" [closable]="true" [dismissableMask]="true"
+  [draggable]="false" [resizable]="false" [style]="{ width: '640px', maxWidth: '96vw' }" (onHide)="close()">
   <div class="ticket-modal-form">
     <div class="field">
       <label for="title">Título</label>
@@ -21,34 +15,24 @@
       <div class="col-12 md:col-6">
         <div class="field">
           <label for="priority">Prioridad</label>
-          <p-select
-            id="priority"
-            [options]="priorityOptions"
-            [(ngModel)]="form.priority"
-            optionLabel="label"
-            optionValue="value"
-          ></p-select>
+          <p-select id="priority" [options]="priorityOptions" [(ngModel)]="form.priority" optionLabel="label"
+            optionValue="value" appendTo="body"></p-select>
         </div>
       </div>
 
       <div class="col-12 md:col-6">
         <div class="field">
           <label for="assignedTo">Asignado a</label>
-          <p-select
-            id="assignedTo"
-            [options]="assignedOptions"
-            [(ngModel)]="form.assignedTo"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Selecciona un usuario"
-          ></p-select>
+          <p-select id="assignedTo" [options]="assignedOptions" [(ngModel)]="form.assignedTo" optionLabel="label"
+            optionValue="value" placeholder="Selecciona un usuario" appendTo="body"></p-select>
         </div>
       </div>
     </div>
 
     <div class="field">
       <label for="dueDate">Fecha límite</label>
-      <input id="dueDate" pInputText [(ngModel)]="form.dueDate" placeholder="YYYY-MM-DD" />
+      <p-datepicker id="dueDate" [(ngModel)]="form.dueDate" [showIcon]="true" [showButtonBar]="true"
+        dateFormat="yy-mm-dd" appendTo="body" styleClass="w-full"></p-datepicker>
     </div>
 
     <div class="ticket-modal-actions">

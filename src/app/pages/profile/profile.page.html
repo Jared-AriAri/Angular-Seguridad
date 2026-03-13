@@ -1,0 +1,105 @@
+<p-card class="home-dashboard-card profile-page-card">
+  <ng-template pTemplate="header">
+    <div class="dashboard-hero">
+      <div class="dashboard-hero__left">
+        <div class="dashboard-hero__meta">
+          <div class="llm-badge">
+            <span class="llm-badge__label">Perfil</span>
+            <strong class="llm-badge__value">Mi cuenta</strong>
+          </div>
+        </div>
+
+        <div>
+          <div class="group-page-title">Mi perfil</div>
+          <div class="group-page-subtitle">
+            Información personal y permisos asignados
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-hero__right">
+        <p-button label="Volver" icon="pi pi-arrow-left" severity="secondary" (onClick)="close()"></p-button>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-container *ngIf="user">
+    <div class="home-dashboard">
+      <div class="dashboard-main-grid">
+        <div class="dashboard-left-column">
+          <p-card class="dashboard-section-card current-user-card">
+            <div class="current-user-head">
+              <div>
+                <div class="current-user-name">
+                  {{ user.fullName || user.username }}
+                </div>
+                <div class="current-user-line">@{{ user.username }}</div>
+              </div>
+
+              <p-tag [value]="user.role || 'member'" severity="contrast"></p-tag>
+            </div>
+
+            <div class="ticket-detail-grid">
+              <div class="dashboard-group-item">
+                <div>
+                  <div class="dashboard-group-name">Usuario</div>
+                  <div class="dashboard-group-meta">{{ user.username }}</div>
+                </div>
+              </div>
+
+              <div class="dashboard-group-item">
+                <div>
+                  <div class="dashboard-group-name">Correo electrónico</div>
+                  <div class="dashboard-group-meta">{{ user.email || "—" }}</div>
+                </div>
+              </div>
+
+              <div class="dashboard-group-item">
+                <div>
+                  <div class="dashboard-group-name">Teléfono</div>
+                  <div class="dashboard-group-meta">{{ user.phone || "—" }}</div>
+                </div>
+              </div>
+
+              <div class="dashboard-group-item">
+                <div>
+                  <div class="dashboard-group-name">Nacimiento</div>
+                  <div class="dashboard-group-meta">{{ user.birthDate || "—" }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-version-box">
+              <div class="dashboard-group-name">Dirección</div>
+              <div class="dashboard-group-meta">{{ user.address || "—" }}</div>
+            </div>
+
+            <div class="dashboard-version-box">
+              <div class="dashboard-group-name">Cuenta creada</div>
+              <div class="dashboard-group-meta">
+                {{ user.createdAt | date: "medium" }}
+              </div>
+            </div>
+          </p-card>
+        </div>
+
+        <div class="dashboard-right-column">
+          <p-card class="dashboard-section-card">
+            <div class="dashboard-section-head">
+              <div>
+                <div class="dashboard-section-title">Permisos</div>
+                <div class="dashboard-section-subtitle">
+                  {{ user.permissions?.length || 0 }} permisos asignados
+                </div>
+              </div>
+            </div>
+
+            <div class="ticket-detail-meta">
+              <p-tag *ngFor="let permission of user.permissions" [value]="permission" severity="info"></p-tag>
+            </div>
+          </p-card>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</p-card>

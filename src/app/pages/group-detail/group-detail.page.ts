@@ -98,11 +98,24 @@ export class GroupDetailPage implements OnInit {
   loadTickets() {
     if (!this.hasPermission("ticket:view")) {
       this.tickets = [];
+      this.filteredTickets = [];
       return;
     }
 
     this.tickets = this.ticketService.getByGroup(this.groupId);
+    if (this.currentFilter) {
+       this.applyFilter(this.currentFilter);
+    } else {
+       this.filteredTickets = [...this.tickets];
+    }
   }
+
+  filteredTickets: Ticket[] = [];
+  currentFilter: 'all' | 'mine' | 'unassigned' | 'high_priority' = 'all';
+
+  get totalTickets() { return this.tickets.length; }
+  get pendingTickets() { return this.tickets.filter(t => t.status === 'pendiente' || t.status === 'en_progreso').length; }
+  get completedTickets() { return this.tickets.filter(t => t.status === 'finalizado').length; }
 
   openCreateTicket() {
     if (!this.hasPermission("ticket:create")) return;
@@ -112,6 +125,7 @@ export class GroupDetailPage implements OnInit {
   closeCreateTicket() {
     this.showCreateModal = false;
     this.loadTickets();
+    this.applyFilter(this.currentFilter);
   }
 
   openMembersModal() {
@@ -132,6 +146,8 @@ export class GroupDetailPage implements OnInit {
   closeTicketDetail() {
     this.showDetailModal = false;
     this.selectedTicket = null;
+    this.loadTickets();
+    this.applyFilter(this.currentFilter);
   }
 
   canEditTicket(ticket: Ticket) {
@@ -145,6 +161,31 @@ export class GroupDetailPage implements OnInit {
       (ticket.assignedTo || "").trim().toLowerCase() ===
         currentUser.username.trim().toLowerCase()
     );
+  }
+
+  applyFilter(filterType: 'all' | 'mine' | 'unassigned' | 'high_priority') {
+    this.currentFilter = filterType;
+    const currentUser = this.authContext.getCurrentUser();
+
+    if (filterType === 'all') {
+      this.filteredTickets = [...this.tickets];
+    } else if (filterType === 'mine') {
+      this.filteredTickets = this.tickets.filter(t => 
+        (t.assignedTo || "").trim().toLowerCase() === (currentUser?.username || "").trim().toLowerCase()
+      );
+    } else if (filterType === 'unassigned') {
+      this.filteredTickets = this.tickets.filter(t => !t.assignedTo || t.assignedTo.trim() === "");
+    } else if (filterType === 'high_priority') {
+      this.filteredTickets = this.tickets.filter(t => t.priority === '最高' || t.priority === '高' || t.priority === 'alta');
+    }
+  }
+
+  onTicketStatusChange(event: {ticket: Ticket, newStatus: string}) {
+    // Ticket status was already mapped to the ticket object by the Kanban component
+    // we just need to persist it and reload
+    this.ticketService.update(event.ticket);
+    this.loadTickets();
+    this.applyFilter(this.currentFilter);
   }
 
   backToGroups() {

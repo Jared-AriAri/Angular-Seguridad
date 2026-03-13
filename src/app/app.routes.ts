@@ -30,7 +30,8 @@ export const routes: Routes = [
       { path: "home", component: HomePage },
       { path: "group", component: GroupPage },
       { path: "group/:id", component: GroupDetailPage },
-      { path: "user", component: UserPage }
+      { path: "user", component: UserPage },
+      { path: "profile", loadComponent: () => import('./pages/profile/profile.page').then(c => c.ProfilePage) }
     ]
   },
   { path: "**", redirectTo: "" }
