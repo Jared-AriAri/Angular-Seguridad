@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnDestroy, OnInit } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 
@@ -14,16 +14,13 @@ import { ConfirmDialogModule } from "primeng/confirmdialog";
 
 import { MessageService, ConfirmationService } from "primeng/api";
 
-type StoredUser = {
-  username: string;
-  password: string;
-  email: string;
-  fullName: string;
-  address: string;
-  phone: string;
-  birthDate: string;
-  createdAt: string;
-};
+import type { Permission, UserItem } from "./user.model";
+import {
+  ALL_PERMISSIONS,
+  MEMBER_DEFAULT_PERMISSIONS,
+  ADMIN_DEFAULT_PERMISSIONS,
+  normalizePermissions,
+} from "./user.model";
 
 type FormState = {
   username: string;
@@ -33,6 +30,7 @@ type FormState = {
   address: string;
   phone: string;
   birthDate: string;
+  permissions: Permission[];
 };
 
 const STORAGE_KEY = "demo_users";
@@ -56,16 +54,21 @@ const STORAGE_KEY = "demo_users";
   providers: [MessageService, ConfirmationService],
   templateUrl: "./user.page.html",
 })
-export class UserPage implements OnInit {
-  users: StoredUser[] = [];
+export class UserPage implements OnInit, OnDestroy {
+  users: UserItem[] = [];
   loading = true;
   q = "";
 
   dialogOpen = false;
   viewOpen = false;
 
-  selected: StoredUser | null = null;
+  selected: UserItem | null = null;
   editingUsername = "";
+
+  permissionOptions = ALL_PERMISSIONS.map((permission) => ({
+    label: this.permissionLabel(permission),
+    value: permission,
+  }));
 
   form: FormState = {
     username: "",
@@ -75,7 +78,11 @@ export class UserPage implements OnInit {
     address: "",
     phone: "",
     birthDate: "",
+    permissions: [...MEMBER_DEFAULT_PERMISSIONS],
   };
+
+  private onStorageChange = () => this.refresh();
+  private onWindowFocus = () => this.refresh();
 
   constructor(
     private toast: MessageService,
@@ -84,6 +91,30 @@ export class UserPage implements OnInit {
 
   ngOnInit() {
     this.refresh();
+    window.addEventListener("storage", this.onStorageChange);
+    window.addEventListener("focus", this.onWindowFocus);
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener("storage", this.onStorageChange);
+    window.removeEventListener("focus", this.onWindowFocus);
+  }
+
+  get filteredUsers(): UserItem[] {
+    const term = this.q.trim().toLowerCase();
+
+    if (!term) return this.users;
+
+    return this.users.filter((user) => {
+      return [
+        user.username,
+        user.email,
+        user.fullName,
+        user.address,
+        user.phone,
+        user.birthDate,
+      ].some((value) => String(value ?? "").toLowerCase().includes(term));
+    });
   }
 
   private refresh() {
@@ -91,16 +122,20 @@ export class UserPage implements OnInit {
     this.loading = false;
   }
 
-  private loadUsers(): StoredUser[] {
+  private loadUsers(): UserItem[] {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as StoredUser[]) : [];
+      const users = raw ? (JSON.parse(raw) as UserItem[]) : [];
+      return users.map((user: any) => ({
+        ...user,
+        permissions: normalizePermissions(user),
+      }));
     } catch {
       return [];
     }
   }
 
-  private saveUsers(users: StoredUser[]) {
+  private saveUsers(users: UserItem[]) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
   }
 
@@ -126,11 +161,35 @@ export class UserPage implements OnInit {
       address: "",
       phone: "",
       birthDate: "",
+      permissions: [...MEMBER_DEFAULT_PERMISSIONS],
     };
     this.dialogOpen = true;
   }
 
-  openEdit(user: StoredUser) {
+  openCreateAdmin() {
+    this.editingUsername = "";
+    this.form = {
+      username: "",
+      password: "",
+      email: "",
+      fullName: "",
+      address: "",
+      phone: "",
+      birthDate: "",
+      permissions: [...ADMIN_DEFAULT_PERMISSIONS],
+    };
+    this.dialogOpen = true;
+  }
+
+  setMemberPreset() {
+    this.form.permissions = [...MEMBER_DEFAULT_PERMISSIONS];
+  }
+
+  setAdminPreset() {
+    this.form.permissions = [...ADMIN_DEFAULT_PERMISSIONS];
+  }
+
+  openEdit(user: UserItem) {
     this.editingUsername = user.username;
     this.form = {
       username: user.username,
@@ -140,12 +199,16 @@ export class UserPage implements OnInit {
       address: user.address,
       phone: user.phone,
       birthDate: user.birthDate,
+      permissions: [...user.permissions],
     };
     this.dialogOpen = true;
   }
 
-  openView(user: StoredUser) {
-    this.selected = user;
+  openView(user: UserItem) {
+    this.selected = {
+      ...user,
+      permissions: [...user.permissions],
+    };
     this.viewOpen = true;
   }
 
@@ -159,6 +222,7 @@ export class UserPage implements OnInit {
     const phone = this.trim(this.form.phone);
     const birthDate = this.trim(this.form.birthDate);
     const password = this.form.password;
+    const permissions = Array.from(new Set(this.form.permissions));
 
     if (!username) {
       this.toast.add({
@@ -223,6 +287,15 @@ export class UserPage implements OnInit {
       return;
     }
 
+    if (!permissions.length) {
+      this.toast.add({
+        severity: "warn",
+        summary: "Permisos requeridos",
+        detail: "Selecciona al menos un permiso.",
+      });
+      return;
+    }
+
     const usernameExists = users.some(
       (u) =>
         u.username.toLowerCase() === username.toLowerCase() &&
@@ -266,6 +339,7 @@ export class UserPage implements OnInit {
           address,
           phone,
           birthDate,
+          permissions,
         };
       }
 
@@ -284,6 +358,7 @@ export class UserPage implements OnInit {
         phone,
         birthDate,
         createdAt: new Date().toISOString(),
+        permissions,
       });
 
       this.toast.add({
@@ -298,7 +373,7 @@ export class UserPage implements OnInit {
     this.dialogOpen = false;
   }
 
-  askDelete(user: StoredUser) {
+  askDelete(user: UserItem) {
     this.confirm.confirm({
       header: "Eliminar usuario",
       message: '¿Seguro que deseas eliminar "' + user.username + '"?',
@@ -318,5 +393,56 @@ export class UserPage implements OnInit {
         });
       },
     });
+  }
+
+  togglePermission(permission: Permission) {
+    if (this.form.permissions.includes(permission)) {
+      this.form.permissions = this.form.permissions.filter((p) => p !== permission);
+      return;
+    }
+
+    this.form.permissions = [...this.form.permissions, permission];
+  }
+
+  hasSelectedPermission(permission: Permission) {
+    return this.form.permissions.includes(permission);
+  }
+
+  permissionLabel(permission: Permission) {
+    const labels: Record<Permission, string> = {
+      "home:view": "Home ver",
+      "profile:view": "Perfil ver",
+      "group:view": "Grupo ver",
+      "group:create": "Grupo crear",
+      "group:edit": "Grupo editar",
+      "group:delete": "Grupo eliminar",
+      "group:members": "Grupo miembros",
+      "ticket:view": "Ticket ver",
+      "ticket:create": "Ticket crear",
+      "ticket:edit": "Ticket editar",
+      "ticket:delete": "Ticket eliminar",
+      "ticket:comment": "Ticket comentar",
+      "ticket:assign": "Ticket asignar",
+      "user:view": "Usuario ver",
+      "user:create": "Usuario crear",
+      "user:edit": "Usuario editar",
+      "user:delete": "Usuario eliminar",
+    };
+
+    return labels[permission];
+  }
+
+  permissionSeverity(permission: Permission) {
+    if (permission.startsWith("user:")) return "danger";
+    if (permission.startsWith("group:")) return "info";
+    if (permission.startsWith("ticket:")) return "warn";
+    return "secondary";
+  }
+
+  permissionCountLabel(user: UserItem) {
+    const count = user.permissions?.length || 0;
+    if (count === ADMIN_DEFAULT_PERMISSIONS.length) return "Admin";
+    if (count === MEMBER_DEFAULT_PERMISSIONS.length) return "Member";
+    return `${count} permisos`;
   }
 }

@@ -1,8 +1,27 @@
 import { Injectable } from "@angular/core";
 import { BehaviorSubject } from "rxjs";
-import type { UserItem } from "./user.model";
+import type { UserItem, UserRole, Permission } from "./user.model";
+import {
+  normalizePermissions,
+  normalizeRole,
+  getDefaultPermissionsByRole,
+} from "./user.model";
 
-const STORAGE_KEY = "demo_users_crud";
+const STORAGE_KEY = "demo_users";
+
+type UpsertPayload = Pick<
+  UserItem,
+  | "username"
+  | "password"
+  | "email"
+  | "fullName"
+  | "address"
+  | "phone"
+  | "birthDate"
+  | "role"
+> & {
+  permissions?: Permission[];
+};
 
 @Injectable({ providedIn: "root" })
 export class UserService {
@@ -12,49 +31,88 @@ export class UserService {
   seedIfEmpty() {
     if (this.subject.value.length) return;
 
-    const now = new Date().toISOString();
+    const superadmin: UserItem = {
+      username: "superadmin",
+      password: "SuperAdmin12345!",
+      email: "superadmin@demo.com",
+      fullName: "Super Administrador",
+      address: "Sistema",
+      phone: "0000000000",
+      birthDate: "2000-01-01",
+      createdAt: new Date().toISOString(),
+      role: "superadmin",
+      permissions: getDefaultPermissionsByRole("superadmin"),
+    };
 
-    const demo: UserItem[] = [
-      {
-        id: crypto.randomUUID(),
-        name: "Jared Admin",
-        email: "admin@demo.com",
-        role: "admin",
-        status: "active",
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: crypto.randomUUID(),
-        name: "Usuario Demo",
-        email: "user@demo.com",
-        role: "member",
-        status: "inactive",
-        createdAt: now,
-        updatedAt: now,
-      },
-    ];
+    const admin: UserItem = {
+      username: "admin",
+      password: "Admin12345!",
+      email: "admin@demo.com",
+      fullName: "Administrador del sistema",
+      address: "Sistema",
+      phone: "0000000001",
+      birthDate: "2000-01-01",
+      createdAt: new Date().toISOString(),
+      role: "admin",
+      permissions: getDefaultPermissionsByRole("admin"),
+    };
 
-    this.persist(demo);
+    const member: UserItem = {
+      username: "member",
+      password: "Member12345!",
+      email: "member@demo.com",
+      fullName: "Usuario miembro",
+      address: "Sistema",
+      phone: "0000000002",
+      birthDate: "2000-01-01",
+      createdAt: new Date().toISOString(),
+      role: "member",
+      permissions: getDefaultPermissionsByRole("member"),
+    };
+
+    const initial = [superadmin, admin, member];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
+    this.subject.next(initial);
+  }
+
+  getAll() {
+    return [...this.subject.value];
+  }
+
+  getByUsername(username: string): UserItem | null {
+    return (
+      this.subject.value.find(
+        (u) => u.username.trim().toLowerCase() === username.trim().toLowerCase()
+      ) || null
+    );
   }
 
   upsert(
-    payload: Pick<UserItem, "name" | "email" | "role" | "status">,
-    id?: string
+    payload: UpsertPayload,
+    username?: string,
+    actorRole: UserRole = "member"
   ) {
-    const now = new Date().toISOString();
     const list = [...this.subject.value];
+    const role = normalizeRole(payload);
+    const permissions =
+      actorRole === "superadmin"
+        ? this.normalizePermissionInput(payload.permissions, role)
+        : getDefaultPermissionsByRole(role);
 
-    if (id) {
-      const idx = list.findIndex((u) => u.id === id);
+    if (username) {
+      const idx = list.findIndex((u) => u.username === username);
       if (idx >= 0) {
         list[idx] = {
           ...list[idx],
-          name: payload.name.trim(),
+          username: payload.username.trim(),
+          password: payload.password,
           email: payload.email.trim().toLowerCase(),
-          role: payload.role,
-          status: payload.status,
-          updatedAt: now,
+          fullName: payload.fullName.trim(),
+          address: payload.address.trim(),
+          phone: payload.phone.trim(),
+          birthDate: payload.birthDate.trim(),
+          role,
+          permissions,
         };
         this.persist(list);
         return list[idx];
@@ -62,13 +120,16 @@ export class UserService {
     }
 
     const created: UserItem = {
-      id: crypto.randomUUID(),
-      name: payload.name.trim(),
+      username: payload.username.trim(),
+      password: payload.password,
       email: payload.email.trim().toLowerCase(),
-      role: payload.role,
-      status: payload.status,
-      createdAt: now,
-      updatedAt: now,
+      fullName: payload.fullName.trim(),
+      address: payload.address.trim(),
+      phone: payload.phone.trim(),
+      birthDate: payload.birthDate.trim(),
+      createdAt: new Date().toISOString(),
+      role,
+      permissions,
     };
 
     list.unshift(created);
@@ -76,9 +137,21 @@ export class UserService {
     return created;
   }
 
-  remove(id: string) {
-    const list = this.subject.value.filter((u) => u.id !== id);
+  remove(username: string) {
+    const list = this.subject.value.filter((u) => u.username !== username);
     this.persist(list);
+  }
+
+  private normalizePermissionInput(
+    permissions: Permission[] | undefined,
+    role: UserRole
+  ): Permission[] {
+    if (!permissions?.length) {
+      return getDefaultPermissionsByRole(role);
+    }
+
+    const normalized = normalizePermissions({ permissions });
+    return normalized.length ? normalized : getDefaultPermissionsByRole(role);
   }
 
   private persist(list: UserItem[]) {
@@ -89,7 +162,18 @@ export class UserService {
   private load(): UserItem[] {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as UserItem[]) : [];
+      const users = raw ? (JSON.parse(raw) as UserItem[]) : [];
+      return users.map((user: any) => {
+        const role = normalizeRole(user);
+        return {
+          ...user,
+          role,
+          permissions: normalizePermissions({
+            ...user,
+            role,
+          }),
+        };
+      });
     } catch {
       return [];
     }

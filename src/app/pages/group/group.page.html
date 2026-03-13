@@ -1,7 +1,8 @@
-<p-toast></p-toast>
-<p-confirmDialog></p-confirmDialog>
+<p-toast *ngIf="hasPermission('group:view')"></p-toast>
+<p-confirmDialog *ngIf="hasPermission('group:view')"></p-confirmDialog>
 
 <p-card
+  *ngIf="hasPermission('group:view')"
   styleClass="auth-card auth-card--premium"
   [style]="{ width: '980px', maxWidth: '96vw' }"
 >
@@ -16,6 +17,7 @@
     <p-toolbar>
       <ng-template pTemplate="start">
         <button
+          *ngIf="hasPermission('group:create')"
           pButton
           type="button"
           icon="pi pi-plus"
@@ -54,7 +56,7 @@
             <th style="width: 28%;">Nombre</th>
             <th>Descripción</th>
             <th style="width: 140px;">Estado</th>
-            <th style="width: 200px; text-align: right;">Acciones</th>
+            <th style="width: 240px; text-align: right;">Acciones</th>
           </tr>
         </ng-template>
 
@@ -78,14 +80,27 @@
 
             <td style="text-align: right; white-space: nowrap;">
               <button
+                *ngIf="hasPermission('group:view')"
+                pButton
+                type="button"
+                icon="pi pi-folder-open"
+                class="p-button-text"
+                (click)="openGroup(g)"
+                pTooltip="Abrir grupo"
+              ></button>
+
+              <button
+                *ngIf="hasPermission('group:view')"
                 pButton
                 type="button"
                 icon="pi pi-eye"
                 class="p-button-text"
                 (click)="openView(g)"
+                pTooltip="Detalle"
               ></button>
 
               <button
+                *ngIf="hasPermission('group:edit')"
                 pButton
                 type="button"
                 icon="pi pi-pencil"
@@ -94,6 +109,7 @@
               ></button>
 
               <button
+                *ngIf="hasPermission('group:delete')"
                 pButton
                 type="button"
                 icon="pi pi-trash"
@@ -117,6 +133,7 @@
 </p-card>
 
 <p-dialog
+  *ngIf="hasPermission('group:create') || hasPermission('group:edit')"
   [(visible)]="dialogOpen"
   [modal]="true"
   [draggable]="false"
@@ -202,6 +219,7 @@
 </p-dialog>
 
 <p-dialog
+  *ngIf="hasPermission('group:view')"
   [(visible)]="viewOpen"
   [modal]="true"
   [draggable]="false"

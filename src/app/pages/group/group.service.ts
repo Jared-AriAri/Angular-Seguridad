@@ -16,7 +16,7 @@ export class GroupService {
 
     const demo: Group[] = [
       {
-        id: crypto.randomUUID(),
+        id: "grupo-a",
         name: "Grupo A",
         description: "Grupo de ejemplo",
         status: "active",
@@ -24,7 +24,7 @@ export class GroupService {
         updatedAt: now,
       },
       {
-        id: crypto.randomUUID(),
+        id: "grupo-b",
         name: "Grupo B",
         description: "Segundo grupo de ejemplo",
         status: "inactive",
@@ -34,6 +34,14 @@ export class GroupService {
     ];
 
     this.persist(demo);
+  }
+
+  getAll() {
+    return [...this.subject.value];
+  }
+
+  getById(id: string): Group | null {
+    return this.subject.value.find((g) => g.id === id) || null;
   }
 
   upsert(

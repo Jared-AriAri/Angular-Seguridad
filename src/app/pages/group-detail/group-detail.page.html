@@ -1,0 +1,90 @@
+<p-card
+  *ngIf="hasPermission('group:view')"
+  styleClass="group-page-card"
+  [style]="{ width: '100%', maxWidth: '100%' }"
+>
+  <ng-template pTemplate="header">
+    <div class="group-page-header">
+      <div>
+        <div class="group-page-title">{{ group?.name || "Grupo" }}</div>
+        <div class="group-page-subtitle">
+          {{ group?.description || "Vista de tickets del grupo" }}
+        </div>
+      </div>
+
+      <div class="group-page-actions">
+        <p-selectButton
+          *ngIf="hasPermission('ticket:view')"
+          [options]="viewOptions"
+          [(ngModel)]="viewMode"
+          optionLabel="label"
+          optionValue="value"
+        ></p-selectButton>
+
+        <button
+          *ngIf="hasPermission('group:members')"
+          pButton
+          type="button"
+          label="Miembros"
+          severity="secondary"
+          (click)="openMembersModal()"
+        ></button>
+
+        <button
+          *ngIf="hasPermission('ticket:create')"
+          pButton
+          type="button"
+          label="Crear ticket"
+          (click)="openCreateTicket()"
+        ></button>
+
+        <button
+          pButton
+          type="button"
+          label="Volver"
+          severity="contrast"
+          (click)="backToGroups()"
+        ></button>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="group-page-content" *ngIf="hasPermission('ticket:view'); else noTicketPermission">
+    <app-ticket-kanban
+      *ngIf="viewMode === 'kanban'"
+      [tickets]="tickets"
+    ></app-ticket-kanban>
+
+    <app-ticket-list
+      *ngIf="viewMode === 'list'"
+      [tickets]="tickets"
+    ></app-ticket-list>
+  </div>
+
+  <ng-template #noTicketPermission>
+    <div class="dashboard-empty-state">
+      No tienes permiso para ver los tickets de este grupo.
+    </div>
+  </ng-template>
+</p-card>
+
+<app-create-ticket-modal
+  *ngIf="hasPermission('ticket:create')"
+  [visible]="showCreateModal"
+  [groupId]="group?.id || ''"
+  (closeModal)="closeCreateTicket()"
+></app-create-ticket-modal>
+
+<app-ticket-detail-modal
+  *ngIf="hasPermission('ticket:view')"
+  [visible]="showDetailModal"
+  [ticket]="selectedTicket"
+  (closeModal)="closeTicketDetail()"
+></app-ticket-detail-modal>
+
+<app-group-members-modal
+  *ngIf="hasPermission('group:members')"
+  [visible]="showMembersModal"
+  [groupId]="group?.id || ''"
+  (closeModal)="closeMembersModal()"
+></app-group-members-modal>

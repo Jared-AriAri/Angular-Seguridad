@@ -11,6 +11,13 @@ import { InputMaskModule } from "primeng/inputmask";
 import { DatePickerModule } from "primeng/datepicker";
 import { PasswordModule } from "primeng/password";
 
+import type { UserItem } from "../user/user.model";
+import {
+  normalizePermissions,
+  normalizeRole,
+  getDefaultPermissionsByRole,
+} from "../user/user.model";
+
 const SPECIALS = /[!@#$%^&*()_\+\-=\[\]{};':",.<>\/\?\\|]/;
 
 type RegisterErrors = {
@@ -22,17 +29,6 @@ type RegisterErrors = {
   birthDate?: string;
   password?: string;
   confirmPassword?: string;
-};
-
-type StoredUser = {
-  username: string;
-  password: string;
-  email: string;
-  fullName: string;
-  address: string;
-  phone: string;
-  birthDate: string;
-  createdAt: string;
 };
 
 const STORAGE_KEY = "demo_users";
@@ -69,7 +65,7 @@ export class RegisterComponent {
   success = "";
   errors: RegisterErrors = {};
 
-  constructor(private router: Router) {}
+  constructor(private router: Router) { }
 
   private trim(v: string) {
     return String(v ?? "").trim();
@@ -112,16 +108,27 @@ export class RegisterComponent {
     }
   }
 
-  private loadUsers(): StoredUser[] {
+  private loadUsers(): UserItem[] {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as StoredUser[]) : [];
+      const users = raw ? (JSON.parse(raw) as UserItem[]) : [];
+      return users.map((user: any) => {
+        const role = normalizeRole(user);
+        return {
+          ...user,
+          role,
+          permissions: normalizePermissions({
+            ...user,
+            role,
+          }),
+        };
+      });
     } catch {
       return [];
     }
   }
 
-  private saveUsers(users: StoredUser[]) {
+  private saveUsers(users: UserItem[]) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
   }
 
@@ -153,10 +160,14 @@ export class RegisterComponent {
 
     const users = this.loadUsers();
     const uNorm = this.trim(this.username).toLowerCase();
-    if (users.some((x) => (x.username ?? "").toLowerCase() === uNorm)) e.username = "Ese usuario ya existe.";
+    if (users.some((x) => (x.username ?? "").toLowerCase() === uNorm)) {
+      e.username = "Ese usuario ya existe.";
+    }
 
     const emailNorm = mail.toLowerCase();
-    if (emailNorm && users.some((x) => (x.email ?? "").toLowerCase() === emailNorm)) e.email = "Ese email ya está registrado.";
+    if (emailNorm && users.some((x) => (x.email ?? "").toLowerCase() === emailNorm)) {
+      e.email = "Ese email ya está registrado.";
+    }
 
     return e;
   }
@@ -174,15 +185,17 @@ export class RegisterComponent {
 
     const users = this.loadUsers();
 
-    const newUser: StoredUser = {
+    const newUser: UserItem = {
       username: this.trim(this.username),
       password: this.password,
-      email: this.trim(this.email),
+      email: this.trim(this.email).toLowerCase(),
       fullName: this.trim(this.fullName),
       address: this.trim(this.address),
       phone: this.trim(this.phone),
       birthDate: this.toISODate(this.birthDate),
       createdAt: new Date().toISOString(),
+      role: "member",
+      permissions: getDefaultPermissionsByRole("member"),
     };
 
     users.push(newUser);

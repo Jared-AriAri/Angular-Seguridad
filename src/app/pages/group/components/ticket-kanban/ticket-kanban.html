@@ -1,0 +1,53 @@
+<div class="ticket-kanban-board">
+  <div class="ticket-kanban-column">
+    <div class="ticket-kanban-column-title">Pendiente</div>
+    <div class="ticket-kanban-stack">
+      <p-card *ngFor="let ticket of pending" styleClass="ticket-card">
+        <div class="ticket-card-title">{{ ticket.title }}</div>
+        <div class="ticket-card-text">{{ ticket.description }}</div>
+        <div class="ticket-card-footer">
+          <p-tag [value]="ticket.priority" severity="warn"></p-tag>
+        </div>
+      </p-card>
+    </div>
+  </div>
+
+  <div class="ticket-kanban-column">
+    <div class="ticket-kanban-column-title">En progreso</div>
+    <div class="ticket-kanban-stack">
+      <p-card *ngFor="let ticket of inProgress" styleClass="ticket-card">
+        <div class="ticket-card-title">{{ ticket.title }}</div>
+        <div class="ticket-card-text">{{ ticket.description }}</div>
+        <div class="ticket-card-footer">
+          <p-tag [value]="ticket.priority" severity="info"></p-tag>
+        </div>
+      </p-card>
+    </div>
+  </div>
+
+  <div class="ticket-kanban-column">
+    <div class="ticket-kanban-column-title">Revisión</div>
+    <div class="ticket-kanban-stack">
+      <p-card *ngFor="let ticket of review" styleClass="ticket-card">
+        <div class="ticket-card-title">{{ ticket.title }}</div>
+        <div class="ticket-card-text">{{ ticket.description }}</div>
+        <div class="ticket-card-footer">
+          <p-tag [value]="ticket.priority" severity="contrast"></p-tag>
+        </div>
+      </p-card>
+    </div>
+  </div>
+
+  <div class="ticket-kanban-column">
+    <div class="ticket-kanban-column-title">Finalizado</div>
+    <div class="ticket-kanban-stack">
+      <p-card *ngFor="let ticket of done" styleClass="ticket-card">
+        <div class="ticket-card-title">{{ ticket.title }}</div>
+        <div class="ticket-card-text">{{ ticket.description }}</div>
+        <div class="ticket-card-footer">
+          <p-tag [value]="ticket.priority" severity="success"></p-tag>
+        </div>
+      </p-card>
+    </div>
+  </div>
+</div>

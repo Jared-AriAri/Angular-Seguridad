@@ -1,16 +1,28 @@
-<p-splitter [style]="{ height: '100vh' }" [panelSizes]="[22, 78]">
+<p-splitter
+  [style]="{ minHeight: '100vh' }"
+  [panelSizes]="[22, 78]"
+  styleClass="app-shell-splitter"
+>
   <ng-template pTemplate="panel">
     <p-panel [showHeader]="false">
       <ng-template pTemplate="content">
         <div class="sidebar-inner">
           <div class="brand">
             <div class="title">{{ projectName }}</div>
-            <p-tag [value]="'API ' + apiVersion" severity="info"></p-tag>
+
+            <div class="brand-meta">
+              <p-tag [value]="'API ' + apiVersion" severity="info"></p-tag>
+              <p-tag [value]="'LLM ' + llmModel" severity="success"></p-tag>
+            </div>
           </div>
 
           <p-divider></p-divider>
 
-          <p-menu [model]="menuItems"></p-menu>
+          <app-current-user-info></app-current-user-info>
+
+          <p-divider></p-divider>
+
+          <p-menu [model]="menuItems" styleClass="shell-menu"></p-menu>
 
           <div class="spacer"></div>
 
@@ -34,7 +46,9 @@
   <ng-template pTemplate="panel">
     <p-panel [showHeader]="false">
       <ng-template pTemplate="content">
-        <router-outlet></router-outlet>
+        <div class="app-content">
+          <router-outlet></router-outlet>
+        </div>
       </ng-template>
     </p-panel>
   </ng-template>

@@ -1,0 +1,43 @@
+<p-dialog
+  header="Miembros del grupo"
+  [(visible)]="visible"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '720px', maxWidth: '96vw' }"
+  (onHide)="close()"
+>
+  <div class="group-members-wrap">
+    <div class="group-members-add">
+      <p-select
+        [options]="userOptions"
+        [(ngModel)]="selectedUsername"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Selecciona un usuario registrado"
+      ></p-select>
+
+      <button pButton type="button" label="Añadir" (click)="addMember()"></button>
+    </div>
+
+    <div class="group-members-list" *ngIf="members.length; else emptyMembers">
+      <div class="group-member-row" *ngFor="let member of members">
+        <div>
+          <div class="group-member-name">{{ member.fullName || member.username }}</div>
+          <div class="group-member-email">{{ member.email }}</div>
+        </div>
+
+        <button
+          pButton
+          type="button"
+          label="Eliminar"
+          severity="danger"
+          (click)="removeMember(member.username)"
+        ></button>
+      </div>
+    </div>
+
+    <ng-template #emptyMembers>
+      <div class="dashboard-empty-state">No hay miembros agregados en este grupo.</div>
+    </ng-template>
+  </div>
+</p-dialog>

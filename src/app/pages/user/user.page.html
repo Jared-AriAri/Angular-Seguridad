@@ -8,21 +8,32 @@
   <ng-template pTemplate="header">
     <div class="auth-head">
       <div class="auth-title">Users</div>
-      <div class="auth-subtitle">CRUD usando demo_users del registro</div>
+      <div class="auth-subtitle">CRUD usando demo_users con permisos</div>
     </div>
   </ng-template>
 
   <div class="auth-body">
     <p-toolbar>
       <ng-template pTemplate="start">
-        <button
-          pButton
-          type="button"
-          icon="pi pi-plus"
-          label="Nuevo"
-          class="p-button-success"
-          (click)="openCreate()"
-        ></button>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button
+            pButton
+            type="button"
+            icon="pi pi-plus"
+            label="Nuevo"
+            class="p-button-success"
+            (click)="openCreate()"
+          ></button>
+
+          <button
+            pButton
+            type="button"
+            icon="pi pi-shield"
+            label="Nuevo admin"
+            class="p-button-warning"
+            (click)="openCreateAdmin()"
+          ></button>
+        </div>
       </ng-template>
 
       <ng-template pTemplate="end">
@@ -51,9 +62,10 @@
       >
         <ng-template pTemplate="header">
           <tr>
-            <th style="width: 18%;">Usuario</th>
-            <th style="width: 22%;">Nombre</th>
+            <th style="width: 16%;">Usuario</th>
+            <th style="width: 20%;">Nombre</th>
             <th>Email</th>
+            <th style="width: 14%;">Permisos</th>
             <th style="width: 16%;">Teléfono</th>
             <th style="width: 200px; text-align: right;">Acciones</th>
           </tr>
@@ -70,6 +82,12 @@
 
             <td>{{ u.fullName }}</td>
             <td>{{ u.email }}</td>
+            <td>
+              <p-tag
+                [value]="permissionCountLabel(u)"
+                severity="info"
+              ></p-tag>
+            </td>
             <td>{{ u.phone }}</td>
 
             <td style="text-align: right; white-space: nowrap;">
@@ -102,7 +120,7 @@
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="5" style="text-align: center; padding: 18px; opacity: 0.7;">
+            <td colspan="6" style="text-align: center; padding: 18px; opacity: 0.7;">
               No hay usuarios.
             </td>
           </tr>
@@ -117,7 +135,7 @@
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
-  [style]="{ width: '720px', maxWidth: '95vw' }"
+  [style]="{ width: '820px', maxWidth: '95vw' }"
   [header]="editingUsername ? 'Editar usuario' : 'Nuevo usuario'"
 >
   <div class="p-fluid formgrid grid">
@@ -176,6 +194,44 @@
         <input pInputText class="w-full" [(ngModel)]="form.password" placeholder="Contraseña" />
       </span>
     </div>
+
+    <div class="field col-12">
+      <label>Preset de permisos</label>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button
+          pButton
+          type="button"
+          label="Member"
+          class="p-button-outlined p-button-sm"
+          (click)="setMemberPreset()"
+        ></button>
+
+        <button
+          pButton
+          type="button"
+          label="Admin"
+          class="p-button-warning p-button-sm"
+          (click)="setAdminPreset()"
+        ></button>
+      </div>
+    </div>
+
+    <div class="field col-12">
+      <label>Permisos</label>
+      <div
+        style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px;"
+      >
+        <button
+          *ngFor="let option of permissionOptions"
+          pButton
+          type="button"
+          class="p-button-sm"
+          [class]="hasSelectedPermission(option.value) ? 'p-button-primary' : 'p-button-outlined'"
+          [label]="option.label"
+          (click)="togglePermission(option.value)"
+        ></button>
+      </div>
+    </div>
   </div>
 
   <ng-template pTemplate="footer">
@@ -203,7 +259,7 @@
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
-  [style]="{ width: '720px', maxWidth: '95vw' }"
+  [style]="{ width: '820px', maxWidth: '95vw' }"
   header="Detalle"
 >
   <div *ngIf="selected" class="p-fluid">
@@ -235,6 +291,17 @@
     <div class="field" style="margin-top: 10px;">
       <label style="opacity: 0.7;">Nacimiento</label>
       <div style="font-weight: 700;">{{ selected.birthDate }}</div>
+    </div>
+
+    <div class="field" style="margin-top: 10px;">
+      <label style="opacity: 0.7;">Permisos</label>
+      <div style="display:flex; flex-wrap:wrap; gap:8px;">
+        <p-tag
+          *ngFor="let permission of selected.permissions"
+          [value]="permissionLabel(permission)"
+          [severity]="permissionSeverity(permission)"
+        ></p-tag>
+      </div>
     </div>
 
     <div class="field" style="margin-top: 10px;">

@@ -1,0 +1,26 @@
+<p-dialog
+  header="Detalle del ticket"
+  [(visible)]="visible"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '720px', maxWidth: '96vw' }"
+  (onHide)="close()"
+>
+  <ng-container *ngIf="ticket">
+    <div class="ticket-detail-wrap">
+      <div class="ticket-detail-title">{{ ticket.title }}</div>
+      <div class="ticket-detail-description">{{ ticket.description }}</div>
+
+      <div class="ticket-detail-meta">
+        <p-tag [value]="ticket.status"></p-tag>
+        <p-tag [value]="ticket.priority" severity="warn"></p-tag>
+      </div>
+
+      <div class="ticket-detail-grid">
+        <div><strong>Asignado a:</strong> {{ ticket.assignedTo }}</div>
+        <div><strong>Creado:</strong> {{ ticket.createdAt }}</div>
+        <div><strong>Fecha límite:</strong> {{ ticket.dueDate || 'Sin fecha' }}</div>
+      </div>
+    </div>
+  </ng-container>
+</p-dialog>

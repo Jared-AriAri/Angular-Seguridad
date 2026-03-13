@@ -1,0 +1,284 @@
+<p-card
+  *ngIf="hasPermission('home:view')"
+  styleClass="auth-card auth-card--premium home-dashboard-card"
+  [style]="{ width: '100%', maxWidth: '100%' }"
+>
+  <ng-template pTemplate="header">
+    <div class="dashboard-hero">
+      <div class="dashboard-hero__left">
+        <div class="auth-title">Dashboard</div>
+        <div class="auth-subtitle">Resumen general del sistema de tickets</div>
+
+        <div class="dashboard-hero__meta">
+          <div class="llm-badge">
+            <span class="llm-badge__label">LLM Model</span>
+            <span class="llm-badge__value">{{ llmModel }}</span>
+          </div>
+
+          <div class="dashboard-version-pill">
+            <span>Versión</span>
+            <strong>{{ version }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="auth-body home-dashboard">
+    <div class="dashboard-kpi-grid" *ngIf="hasPermission('ticket:view')">
+      <p-card styleClass="dashboard-stat-card">
+        <div class="dashboard-stat-top">
+          <div class="dashboard-stat-label">Total tickets</div>
+          <i class="pi pi-ticket dashboard-stat-icon"></i>
+        </div>
+        <div class="dashboard-stat-value">{{ stats.total }}</div>
+        <div class="dashboard-stat-helper">Total cargado del sistema</div>
+      </p-card>
+
+      <p-card styleClass="dashboard-stat-card">
+        <div class="dashboard-stat-top">
+          <div class="dashboard-stat-label">Pendientes</div>
+          <i class="pi pi-clock dashboard-stat-icon"></i>
+        </div>
+        <div class="dashboard-stat-value">{{ stats.pendientes }}</div>
+        <p-tag value="Pendiente" severity="warn"></p-tag>
+      </p-card>
+
+      <p-card styleClass="dashboard-stat-card">
+        <div class="dashboard-stat-top">
+          <div class="dashboard-stat-label">En progreso</div>
+          <i class="pi pi-spinner dashboard-stat-icon"></i>
+        </div>
+        <div class="dashboard-stat-value">{{ stats.enProgreso }}</div>
+        <p-tag value="En progreso" severity="info"></p-tag>
+      </p-card>
+
+      <p-card styleClass="dashboard-stat-card">
+        <div class="dashboard-stat-top">
+          <div class="dashboard-stat-label">Revisión</div>
+          <i class="pi pi-search dashboard-stat-icon"></i>
+        </div>
+        <div class="dashboard-stat-value">{{ stats.revision }}</div>
+        <p-tag value="Revisión" severity="contrast"></p-tag>
+      </p-card>
+
+      <p-card styleClass="dashboard-stat-card">
+        <div class="dashboard-stat-top">
+          <div class="dashboard-stat-label">Finalizados</div>
+          <i class="pi pi-check-circle dashboard-stat-icon"></i>
+        </div>
+        <div class="dashboard-stat-value">{{ stats.finalizados }}</div>
+        <p-tag value="Finalizado" severity="success"></p-tag>
+      </p-card>
+
+      <p-card
+        *ngIf="hasPermission('ticket:edit') || hasPermission('ticket:delete')"
+        styleClass="dashboard-stat-card dashboard-stat-card--danger"
+      >
+        <div class="dashboard-stat-top">
+          <div class="dashboard-stat-label">Bloqueados</div>
+          <i class="pi pi-ban dashboard-stat-icon"></i>
+        </div>
+        <div class="dashboard-stat-value">{{ stats.bloqueados }}</div>
+        <p-tag value="Bloqueado" severity="danger"></p-tag>
+      </p-card>
+    </div>
+
+    <div class="dashboard-main-grid">
+      <div class="dashboard-left-column">
+        <p-card
+          *ngIf="hasPermission('ticket:view')"
+          styleClass="dashboard-section-card dashboard-chart-card"
+        >
+          <div class="dashboard-section-head">
+            <div>
+              <div class="dashboard-section-title">Distribución de tickets</div>
+              <div class="dashboard-section-subtitle">
+                Estado actual del sistema
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-chart-wrap">
+            <p-chart
+              type="bar"
+              [data]="chartData"
+              [options]="chartOptions"
+            ></p-chart>
+          </div>
+        </p-card>
+
+        <p-card
+          *ngIf="hasPermission('ticket:view')"
+          styleClass="dashboard-section-card"
+        >
+          <div class="dashboard-section-head">
+            <div class="dashboard-section-title">Filtros rápidos</div>
+          </div>
+
+          <div class="dashboard-filters">
+            <button
+              pButton
+              type="button"
+              class="p-button-outlined p-button-sm"
+              label="Todos"
+              [ngClass]="{ 'active-filter': activeQuickFilter === 'all' }"
+              (click)="applyQuickFilter('all')"
+            ></button>
+
+            <button
+              pButton
+              type="button"
+              class="p-button-outlined p-button-sm"
+              label="Mis tickets"
+              [ngClass]="{ 'active-filter': activeQuickFilter === 'mine' }"
+              (click)="applyQuickFilter('mine')"
+            ></button>
+
+            <button
+              pButton
+              type="button"
+              class="p-button-outlined p-button-sm"
+              label="Sin asignar"
+              [ngClass]="{ 'active-filter': activeQuickFilter === 'unassigned' }"
+              (click)="applyQuickFilter('unassigned')"
+            ></button>
+
+            <button
+              pButton
+              type="button"
+              class="p-button-outlined p-button-sm"
+              label="Prioridad alta"
+              [ngClass]="{ 'active-filter': activeQuickFilter === 'high' }"
+              (click)="applyQuickFilter('high')"
+            ></button>
+          </div>
+        </p-card>
+
+        <p-card
+          *ngIf="hasPermission('ticket:view')"
+          styleClass="dashboard-section-card"
+        >
+          <div class="dashboard-section-head">
+            <div>
+              <div class="dashboard-section-title">Tickets recientes</div>
+              <div class="dashboard-section-subtitle">
+                Tickets reales del sistema según el filtro seleccionado
+              </div>
+            </div>
+
+            <a
+              *ngIf="hasPermission('group:view')"
+              pButton
+              [routerLink]="['/app/group']"
+              label="Ver grupos"
+              icon="pi pi-list"
+              class="p-button-text p-button-sm"
+            ></a>
+          </div>
+
+          <ng-container
+            *ngIf="filteredRecentTickets.length; else emptyRecentTickets"
+          >
+            <div class="dashboard-ticket-list">
+              <div
+                class="dashboard-ticket-item"
+                *ngFor="let ticket of filteredRecentTickets"
+              >
+                <div class="dashboard-ticket-main">
+                  <div class="dashboard-ticket-title-row">
+                    <div class="dashboard-ticket-title">
+                      #{{ ticket.id }} · {{ ticket.title }}
+                    </div>
+
+                    <p-tag
+                      [value]="getTicketStatusLabel(ticket.status)"
+                      [severity]="getTicketStatusSeverity(ticket.status)"
+                    ></p-tag>
+                  </div>
+
+                  <div class="dashboard-ticket-meta">
+                    <span>Asignado: {{ getAssignedToLabel(ticket) }}</span>
+                    <span>Prioridad: {{ getPriorityLabel(ticket) }}</span>
+                    <span>Límite: {{ getDueDateLabel(ticket) }}</span>
+                  </div>
+                </div>
+
+                <div class="dashboard-ticket-actions">
+                  <a
+                    *ngIf="hasPermission('group:view')"
+                    pButton
+                    [routerLink]="getGroupRoute(ticket.groupId)"
+                    icon="pi pi-eye"
+                    class="p-button-rounded p-button-text"
+                  ></a>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-template #emptyRecentTickets>
+            <div class="dashboard-empty-state">
+              No hay tickets para el filtro seleccionado.
+            </div>
+          </ng-template>
+        </p-card>
+      </div>
+
+      <div class="dashboard-right-column">
+        <p-card
+          *ngIf="hasPermission('group:view')"
+          styleClass="dashboard-section-card"
+        >
+          <div class="dashboard-section-head">
+            <div class="dashboard-section-title">Mis grupos</div>
+          </div>
+
+          <div *ngIf="groups.length; else emptyGroups" class="dashboard-groups">
+            <div class="dashboard-group-item" *ngFor="let group of groups">
+              <div>
+                <div class="dashboard-group-name">{{ group.name }}</div>
+                <div class="dashboard-group-meta">
+                  {{ getStatusLabel(group.status) }} ·
+                  {{ getTicketsByGroup(group.id) }} tickets
+                </div>
+              </div>
+
+              <a
+                [routerLink]="getGroupRoute(group.id)"
+                class="p-button p-component p-button-sm"
+              >
+                <span class="p-button-label">Abrir</span>
+              </a>
+            </div>
+          </div>
+
+          <ng-template #emptyGroups>
+            <div class="dashboard-empty-state">
+              No tienes grupos asignados.
+            </div>
+          </ng-template>
+        </p-card>
+
+        <p-card
+          *ngIf="quickActions.length"
+          styleClass="dashboard-section-card"
+        >
+          <div class="dashboard-section-head">
+            <div class="dashboard-section-title">Acciones rápidas</div>
+          </div>
+
+          <div class="dashboard-actions">
+            <a
+              *ngFor="let action of quickActions"
+              [routerLink]="action.route"
+              class="p-button p-component p-button-outlined dashboard-action-btn"
+            >
+              <span class="p-button-label">{{ action.label }}</span>
+            </a>
+          </div>
+        </p-card>
+      </div>
+    </div>
+  </div>
+</p-card>
