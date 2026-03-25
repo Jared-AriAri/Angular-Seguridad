@@ -23,14 +23,26 @@ export class AuthContextService {
   }
 
   getCurrentUsername(): string | null {
-    const directKeys = ["currentUsername", "username", "loggedUsername"];
+    const directKeys = [
+      "currentUsername",
+      "username",
+      "loggedUsername",
+    ];
 
     for (const key of directKeys) {
       const value = localStorage.getItem(key);
       if (value && value.trim()) return value.trim();
     }
 
-    const jsonKeys = ["currentUser", "user", "sessionUser"];
+    const jsonKeys = [
+      "currentUser",
+      "user",
+      "sessionUser",
+      "current_user",
+      "auth_user",
+      "session_user",
+      "logged_user",
+    ];
 
     for (const key of jsonKeys) {
       const raw = localStorage.getItem(key);
@@ -39,7 +51,7 @@ export class AuthContextService {
       try {
         const parsed = JSON.parse(raw);
         if (parsed?.username) return String(parsed.username).trim();
-      } catch {}
+      } catch { }
     }
 
     return null;
@@ -49,29 +61,56 @@ export class AuthContextService {
     const username = this.getCurrentUsername();
     if (!username) return null;
 
+    const users = this.getUsers();
+
     return (
-      this.getUsers().find(
+      users.find(
         (user) =>
-          user.username.trim().toLowerCase() === username.trim().toLowerCase()
+          user.username.trim().toLowerCase() ===
+          username.trim().toLowerCase()
       ) || null
     );
   }
 
-  hasPermission(permission: Permission): boolean {
+  getCurrentPermissions(): Permission[] {
     const user = this.getCurrentUser();
-    if (!user) return false;
-    return user.permissions.includes(permission);
+    if (!user) return [];
+
+    return normalizePermissions(user);
+  }
+
+  hasPermission(permission: Permission): boolean {
+    const permissions = this.getCurrentPermissions();
+    return permissions.includes(permission);
   }
 
   hasAnyPermission(permissions: Permission[]): boolean {
-    const user = this.getCurrentUser();
-    if (!user) return false;
-    return permissions.some((permission) => user.permissions.includes(permission));
+    const userPermissions = this.getCurrentPermissions();
+
+    return permissions.some((permission) =>
+      userPermissions.includes(permission)
+    );
   }
 
   hasAllPermissions(permissions: Permission[]): boolean {
-    const user = this.getCurrentUser();
-    if (!user) return false;
-    return permissions.every((permission) => user.permissions.includes(permission));
+    const userPermissions = this.getCurrentPermissions();
+
+    return permissions.every((permission) =>
+      userPermissions.includes(permission)
+    );
+  }
+
+  isMyTicket(assignedTo: string | null | undefined): boolean {
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) return false;
+
+    return (
+      (assignedTo || "").trim().toLowerCase() ===
+      currentUser.username.trim().toLowerCase()
+    );
+  }
+
+  isLogged(): boolean {
+    return this.getCurrentUser() !== null;
   }
 }

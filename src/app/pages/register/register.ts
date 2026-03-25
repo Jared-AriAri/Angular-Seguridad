@@ -14,8 +14,7 @@ import { PasswordModule } from "primeng/password";
 import type { UserItem } from "../user/user.model";
 import {
   normalizePermissions,
-  normalizeRole,
-  getDefaultPermissionsByRole,
+  MEMBER_DEFAULT_PERMISSIONS,
 } from "../user/user.model";
 
 const SPECIALS = /[!@#$%^&*()_\+\-=\[\]{};':",.<>\/\?\\|]/;
@@ -48,7 +47,6 @@ type RegisterErrors = {
     MessageModule,
   ],
   templateUrl: "./register.html",
-  styleUrls: [],
 })
 export class RegisterComponent {
   username = "";
@@ -118,17 +116,10 @@ export class RegisterComponent {
       const raw = localStorage.getItem(STORAGE_KEY);
       const users = raw ? (JSON.parse(raw) as UserItem[]) : [];
 
-      return users.map((user: any) => {
-        const role = normalizeRole(user);
-        return {
-          ...user,
-          role,
-          permissions: normalizePermissions({
-            ...user,
-            role,
-          }),
-        };
-      });
+      return users.map((user: any) => ({
+        ...user,
+        permissions: normalizePermissions(user),
+      }));
     } catch {
       return [];
     }
@@ -205,8 +196,7 @@ export class RegisterComponent {
       phone: this.normalizePhone(this.phone),
       birthDate: this.toISODate(this.birthDate),
       createdAt: new Date().toISOString(),
-      role: "member",
-      permissions: getDefaultPermissionsByRole("member"),
+      permissions: [...MEMBER_DEFAULT_PERMISSIONS],
     };
 
     users.push(newUser);

@@ -13,6 +13,7 @@ import {
   ADMIN_DEFAULT_PERMISSIONS,
   normalizePermissions,
 } from "../../../user/user.model";
+import { AuthContextService } from "../../../../shared/auth-context.service";
 
 type StoredUser = {
   username: string;
@@ -50,13 +51,13 @@ export class CreateTicketModalComponent implements OnChanges {
   @Output() closeModal = new EventEmitter<void>();
 
   priorityOptions = [
-    { label: "Highest (最高)", value: "最高" },
-    { label: "High (高)", value: "高" },
-    { label: "Medium High (中高)", value: "中高" },
-    { label: "Medium (中)", value: "中" },
-    { label: "Medium Low (中低)", value: "中低" },
-    { label: "Low (低)", value: "低" },
-    { label: "Lowest (最低)", value: "最低" },
+    { label: "Highest", value: "highest" },
+    { label: "High", value: "high" },
+    { label: "Medium High", value: "medium_high" },
+    { label: "Medium", value: "medium" },
+    { label: "Medium Low", value: "medium_low" },
+    { label: "Low", value: "low" },
+    { label: "Lowest", value: "lowest" },
   ];
 
   assignedOptions: { label: string; value: string }[] = [];
@@ -70,12 +71,15 @@ export class CreateTicketModalComponent implements OnChanges {
   } = {
       title: "",
       description: "",
-      priority: "中",
+      priority: "medium",
       assignedTo: "",
       dueDate: null,
     };
 
-  constructor(private ticketService: TicketService) { }
+  constructor(
+    private ticketService: TicketService,
+    private authContext: AuthContextService
+  ) { }
 
   ngOnChanges() {
     this.loadUsers();
@@ -124,13 +128,17 @@ export class CreateTicketModalComponent implements OnChanges {
       return;
     }
 
+    const currentUser =
+      this.authContext.getCurrentUser()?.username || "unknown";
+
     this.ticketService.create({
       id: crypto.randomUUID(),
       title,
       description,
-      status: "pendiente",
+      status: "pending",
       priority: this.form.priority,
       assignedTo: this.form.assignedTo,
+      createdBy: currentUser,
       createdAt: new Date().toISOString(),
       dueDate: this.toISODate(this.form.dueDate),
       groupId: this.groupId,
@@ -141,7 +149,7 @@ export class CreateTicketModalComponent implements OnChanges {
     this.form = {
       title: "",
       description: "",
-      priority: "中",
+      priority: "medium",
       assignedTo: "",
       dueDate: null,
     };

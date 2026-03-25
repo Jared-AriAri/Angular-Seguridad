@@ -36,7 +36,7 @@
                 <div class="current-user-line">@{{ user.username }}</div>
               </div>
 
-              <p-tag [value]="user.role || 'member'" severity="contrast"></p-tag>
+              <p-tag [value]="permissionLevelLabel" severity="contrast"></p-tag>
             </div>
 
             <div class="ticket-detail-grid">
@@ -89,7 +89,7 @@
               <div>
                 <div class="dashboard-section-title">Permisos</div>
                 <div class="dashboard-section-subtitle">
-                  {{ user.permissions?.length || 0 }} permisos asignados
+                  {{ user.permissions.length || 0 }} permisos asignados
                 </div>
               </div>
             </div>

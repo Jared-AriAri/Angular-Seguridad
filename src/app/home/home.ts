@@ -77,7 +77,7 @@ export class HomePage implements OnInit {
     private groupService: GroupService,
     private ticketService: TicketService,
     private authContext: AuthContextService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.groupService.seedIfEmpty();
@@ -108,17 +108,34 @@ export class HomePage implements OnInit {
 
   loadTickets() {
     const visibleGroupIds = new Set(this.groups.map((group) => group.id));
-    this.tickets = (this.ticketService.getAll() ?? []).filter((ticket) =>
+    const currentUsername = (this.getCurrentUsername() || "").trim().toLowerCase();
+
+    const groupScopedTickets = (this.ticketService.getAll() ?? []).filter((ticket) =>
       visibleGroupIds.has(ticket.groupId)
+    );
+
+    this.tickets = groupScopedTickets.filter(
+      (ticket) =>
+        (ticket.assignedTo || "").trim().toLowerCase() === currentUsername
     );
 
     this.stats = {
       total: this.tickets.length,
-      pendientes: this.tickets.filter((t) => t.status === "pendiente").length,
-      enProgreso: this.tickets.filter((t) => t.status === "en_progreso").length,
-      revision: this.tickets.filter((t) => t.status === "revision").length,
-      finalizados: this.tickets.filter((t) => t.status === "finalizado").length,
-      bloqueados: 0,
+      pendientes: this.tickets.filter(
+        (t) => t.status === "pendiente" || t.status === "pending"
+      ).length,
+      enProgreso: this.tickets.filter(
+        (t) => t.status === "en_progreso" || t.status === "in_progress"
+      ).length,
+      revision: this.tickets.filter(
+        (t) => t.status === "revision" || t.status === "review"
+      ).length,
+      finalizados: this.tickets.filter(
+        (t) => t.status === "finalizado" || t.status === "completed"
+      ).length,
+      bloqueados: this.tickets.filter(
+        (t) => t.status === "bloqueado" || t.status === "blocked"
+      ).length,
     };
 
     this.applyQuickFilter(this.activeQuickFilter);
@@ -128,14 +145,13 @@ export class HomePage implements OnInit {
   applyQuickFilter(filter: QuickFilter) {
     this.activeQuickFilter = filter;
 
-    const currentUsername = this.getCurrentUsername();
+    const currentUsername = (this.getCurrentUsername() || "").trim().toLowerCase();
     let data = [...this.tickets];
 
     if (filter === "mine") {
       data = data.filter(
         (t) =>
-          (t.assignedTo || "").trim().toLowerCase() ===
-          (currentUsername || "").trim().toLowerCase()
+          (t.assignedTo || "").trim().toLowerCase() === currentUsername
       );
     }
 
@@ -144,7 +160,12 @@ export class HomePage implements OnInit {
     }
 
     if (filter === "high") {
-      data = data.filter((t) => t.priority === "alta");
+      data = data.filter(
+        (t) =>
+          t.priority === "alta" ||
+          t.priority === "highest" ||
+          t.priority === "high"
+      );
     }
 
     this.filteredRecentTickets = data
@@ -167,13 +188,25 @@ export class HomePage implements OnInit {
   getTicketStatusLabel(status: string | null | undefined) {
     switch (status) {
       case "pendiente":
+      case "pending":
         return "Pendiente";
+
       case "en_progreso":
+      case "in_progress":
         return "En progreso";
+
       case "revision":
+      case "review":
         return "Revisión";
+
       case "finalizado":
+      case "completed":
         return "Finalizado";
+
+      case "bloqueado":
+      case "blocked":
+        return "Bloqueado";
+
       default:
         return status || "Sin estado";
     }
@@ -184,13 +217,25 @@ export class HomePage implements OnInit {
   ): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" {
     switch (status) {
       case "pendiente":
+      case "pending":
         return "warn";
+
       case "en_progreso":
+      case "in_progress":
         return "info";
+
       case "revision":
+      case "review":
         return "contrast";
+
       case "finalizado":
+      case "completed":
         return "success";
+
+      case "bloqueado":
+      case "blocked":
+        return "danger";
+
       default:
         return "secondary";
     }
@@ -199,11 +244,21 @@ export class HomePage implements OnInit {
   getPriorityLabel(ticket: Ticket) {
     switch (ticket.priority) {
       case "alta":
+      case "highest":
+      case "high":
         return "Alta";
+
       case "media":
+      case "medium_high":
+      case "medium":
+      case "medium_low":
         return "Media";
+
       case "baja":
+      case "low":
+      case "lowest":
         return "Baja";
+
       default:
         return "Sin prioridad";
     }
@@ -257,7 +312,7 @@ export class HomePage implements OnInit {
 
   private buildChart() {
     this.chartData = {
-      labels: ["Pendientes", "En progreso", "Revisión", "Finalizados"],
+      labels: ["Pendientes", "En progreso", "Revisión", "Finalizados", "Bloqueados"],
       datasets: [
         {
           label: "Tickets",
@@ -266,12 +321,14 @@ export class HomePage implements OnInit {
             this.stats.enProgreso,
             this.stats.revision,
             this.stats.finalizados,
+            this.stats.bloqueados,
           ],
           backgroundColor: [
             "rgba(249, 115, 22, 0.85)",
             "rgba(56, 189, 248, 0.85)",
             "rgba(226, 232, 240, 0.85)",
             "rgba(74, 222, 128, 0.85)",
+            "rgba(239, 68, 68, 0.85)",
           ],
           borderRadius: 10,
           maxBarThickness: 42,
@@ -282,28 +339,17 @@ export class HomePage implements OnInit {
     this.chartOptions = {
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          display: false,
-        },
+        legend: { display: false },
       },
       scales: {
         x: {
-          ticks: {
-            color: "#cbd5e1",
-          },
-          grid: {
-            display: false,
-          },
+          ticks: { color: "#cbd5e1" },
+          grid: { display: false },
         },
         y: {
           beginAtZero: true,
-          ticks: {
-            color: "#94a3b8",
-            precision: 0,
-          },
-          grid: {
-            color: "rgba(148, 163, 184, 0.12)",
-          },
+          ticks: { color: "#94a3b8", precision: 0 },
+          grid: { color: "rgba(148, 163, 184, 0.12)" },
         },
       },
     };
@@ -322,38 +368,22 @@ export class HomePage implements OnInit {
   }
 
   private getCurrentUsername(): string | null {
-    const possibleKeys = ["currentUsername", "username", "loggedUsername"];
-
-    for (const key of possibleKeys) {
-      const value = localStorage.getItem(key);
-      if (value && value.trim()) return value;
-    }
-
-    const possibleJsonKeys = ["currentUser", "user", "sessionUser"];
-
-    for (const key of possibleJsonKeys) {
-      const raw = localStorage.getItem(key);
-      if (!raw) continue;
-
-      try {
-        const parsed = JSON.parse(raw);
-
-        if (parsed?.username) return String(parsed.username);
-        if (parsed?.email) return String(parsed.email);
-      } catch {}
-    }
-
-    return null;
+    return this.authContext.getCurrentUsername();
   }
 
   private filterGroupsForCurrentUser(groups: Group[]) {
     const currentUser = this.authContext.getCurrentUser();
     if (!currentUser) return [];
 
+    if (this.authContext.hasPermission("group:members")) {
+      return groups;
+    }
+
     const membershipMap = this.loadGroupMembers();
 
     return groups.filter((group) => {
       const members = membershipMap[group.id] || [];
+
       return members.some(
         (member) =>
           (member.username || "").trim().toLowerCase() ===
@@ -393,6 +423,7 @@ export class HomePage implements OnInit {
 
       try {
         const parsed = JSON.parse(raw);
+
         const value =
           parsed?.llmModel ||
           parsed?.selectedLLM ||
@@ -401,7 +432,7 @@ export class HomePage implements OnInit {
           parsed?.aiModel;
 
         if (value && String(value).trim()) return String(value);
-      } catch {}
+      } catch { }
     }
 
     return "No configurado";

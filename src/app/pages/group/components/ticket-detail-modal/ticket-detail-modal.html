@@ -1,98 +1,114 @@
-<p-dialog
-  header="Detalle del ticket"
-  [(visible)]="visible"
-  [modal]="true"
-  [closable]="true"
-  [style]="{ width: '720px', maxWidth: '96vw' }"
-  (onHide)="close()"
->
+<p-dialog [(visible)]="visible" [modal]="true" [style]="{width:'600px'}" (onHide)="close()">
+
   <ng-container *ngIf="editableTicket">
-    <div class="ticket-detail-wrap">
-      
-      <!-- View / Edit Form -->
-      <div class="p-fluid formgrid grid">
-        <div class="field col-12">
-          <label>Título</label>
-          <input *ngIf="canEdit; else readOnlyTitle" pInputText [(ngModel)]="editableTicket.title" />
-          <ng-template #readOnlyTitle><div class="ticket-detail-title">{{ editableTicket.title }}</div></ng-template>
-        </div>
 
-        <div class="field col-12">
-          <label>Descripción</label>
-          <textarea *ngIf="canEdit; else readOnlyDesc" pTextarea [(ngModel)]="editableTicket.description" rows="3"></textarea>
-          <ng-template #readOnlyDesc><div class="ticket-detail-description">{{ editableTicket.description }}</div></ng-template>
-        </div>
+    <div class="p-fluid">
 
-        <div class="field col-6">
-          <label>Estado</label>
-          <p-select *ngIf="canEdit; else viewStatus" [options]="statusOptions" [(ngModel)]="editableTicket.status" optionLabel="label" optionValue="value" appendTo="body"></p-select>
-          <ng-template #viewStatus>
-            <div><p-tag [value]="editableTicket.status"></p-tag></div>
-          </ng-template>
-        </div>
-
-        <div class="field col-6">
-          <label>Prioridad</label>
-          <p-select *ngIf="canEdit; else viewPriority" [options]="priorityOptions" [(ngModel)]="editableTicket.priority" optionLabel="label" optionValue="value" appendTo="body"></p-select>
-          <ng-template #viewPriority>
-            <div><p-tag [value]="editableTicket.priority" severity="warn"></p-tag></div>
-          </ng-template>
-        </div>
-
-        <div class="field col-6">
-          <label>Asignado a</label>
-          <p-select *ngIf="canEdit; else viewAssign" [options]="assignedOptions" [(ngModel)]="editableTicket.assignedTo" optionLabel="label" optionValue="value" appendTo="body"></p-select>
-          <ng-template #viewAssign>
-            <div>{{ editableTicket.assignedTo || 'Sin asignar' }}</div>
-          </ng-template>
-        </div>
-
-        <div class="field col-6">
-          <label>Fecha límite</label>
-          <input *ngIf="canEdit; else viewDue" pInputText type="date" [(ngModel)]="editableTicket.dueDate" />
-          <ng-template #viewDue>
-            <div>{{ editableTicket.dueDate || 'Sin fecha límite' }}</div>
-          </ng-template>
-        </div>
+      <div class="field">
+        <label>Título</label>
+        <input
+          pInputText
+          [(ngModel)]="editableTicket.title"
+          [disabled]="!canEditTicket"
+        />
       </div>
 
-      <p-button *ngIf="canEdit" label="Guardar cambios" icon="pi pi-check" (click)="save()" styleClass="w-full mt-3"></p-button>
+      <div class="field">
+        <label>Descripción</label>
+        <textarea
+          pTextarea
+          rows="4"
+          [(ngModel)]="editableTicket.description"
+          [disabled]="!canEditTicket"
+        ></textarea>
+      </div>
 
-      <hr class="mt-4 mb-3" style="border-top:1px solid #e2e8f0;">
+      <div class="field">
+        <label>Estado</label>
+        <p-select
+          [options]="statusOptions"
+          [(ngModel)]="editableTicket.status"
+          optionLabel="label"
+          optionValue="value"
+          [disabled]="!canEditTicket"
+        ></p-select>
+      </div>
 
-      <!-- Comments & Activity Section -->
-      <div class="grid">
-        <div class="col-12 md:col-6">
-          <h4>Comentarios</h4>
-          <div class="ticket-comments p-3 surface-100 border-round mb-3" style="max-height: 250px; overflow-y: auto;">
-            <div *ngIf="!editableTicket.comments || editableTicket.comments.length === 0" class="text-500 text-sm">No hay comentarios aún.</div>
-            <div *ngFor="let c of editableTicket.comments" class="comment-item mb-2 pb-2 border-bottom-1 border-300">
-              <div class="flex justify-content-between text-xs text-500 mb-1">
-                <strong>{{ c.author }}</strong>
-                <span>{{ c.createdAt | date:'short' }}</span>
-              </div>
-              <div class="text-sm">{{ c.message }}</div>
-            </div>
-          </div>
-          
-          <div class="flex gap-2">
-            <input pInputText placeholder="Escribe un comentario..." [(ngModel)]="newComment" class="flex-grow-1" (keyup.enter)="addComment()" />
-            <p-button icon="pi pi-send" (click)="addComment()" [disabled]="!newComment.trim()"></p-button>
-          </div>
-        </div>
+      <div class="field">
+        <label>Prioridad</label>
+        <p-select
+          [options]="priorityOptions"
+          [(ngModel)]="editableTicket.priority"
+          optionLabel="label"
+          optionValue="value"
+          [disabled]="!canEditTicket"
+        ></p-select>
+      </div>
 
-        <div class="col-12 md:col-6">
-          <h4>Historial de Actividad</h4>
-          <div class="ticket-history p-3 surface-100 border-round" style="max-height: 250px; overflow-y: auto;">
-            <div *ngIf="!editableTicket.history || editableTicket.history.length === 0" class="text-500 text-sm">Sin historial.</div>
-            <div *ngFor="let h of editableTicket.history" class="history-item mb-2 pb-2 border-bottom-1 border-300">
-              <div class="text-xs text-500">{{ h.createdAt | date:'shortTime' }}</div>
-              <div class="text-sm"><strong>{{ h.user }}</strong> {{ h.action }}</div>
-            </div>
-          </div>
-        </div>
+      <div class="field">
+        <label>Asignado a</label>
+        <p-select
+          [options]="assignedOptions"
+          [(ngModel)]="editableTicket.assignedTo"
+          optionLabel="label"
+          optionValue="value"
+          [disabled]="!canEditTicket"
+        ></p-select>
+      </div>
+
+      <div class="field">
+        <label>Fecha límite</label>
+        <p-datepicker
+          [(ngModel)]="editableTicket.dueDate"
+          [disabled]="!canEditTicket"
+        ></p-datepicker>
       </div>
 
     </div>
+
+    <div class="p-mt-3">
+      <label>Comentarios</label>
+
+      <div *ngFor="let c of editableTicket.comments" class="p-mb-2">
+        <p-tag severity="info" [value]="c.author"></p-tag>
+        <span class="p-ml-2">{{ c.message }}</span>
+      </div>
+
+      <div class="p-inputgroup p-mt-2">
+        <input
+          pInputText
+          [(ngModel)]="newComment"
+          placeholder="Agregar comentario"
+          [disabled]="!canEditTicket"
+        />
+
+        <button
+          pButton
+          icon="pi pi-send"
+          (click)="addComment()"
+          [disabled]="!canEditTicket"
+        ></button>
+      </div>
+    </div>
+
   </ng-container>
+
+  <ng-template pTemplate="footer">
+    <button
+      pButton
+      label="Guardar"
+      icon="pi pi-check"
+      (click)="save()"
+      [disabled]="!canEditTicket"
+    ></button>
+
+    <button
+      pButton
+      label="Cerrar"
+      icon="pi pi-times"
+      class="p-button-secondary"
+      (click)="close()"
+    ></button>
+  </ng-template>
+
 </p-dialog>

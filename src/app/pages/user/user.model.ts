@@ -15,9 +15,8 @@ export type Permission =
   | "user:view"
   | "user:create"
   | "user:edit"
-  | "user:delete";
-
-export type UserRole = "member" | "admin" | "superadmin";
+  | "user:delete"
+  | "user:permissions:edit";
 
 export type UserItem = {
   username: string;
@@ -28,7 +27,6 @@ export type UserItem = {
   phone: string;
   birthDate: string;
   createdAt: string;
-  role: UserRole;
   permissions: Permission[];
 };
 
@@ -50,6 +48,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   "user:create",
   "user:edit",
   "user:delete",
+  "user:permissions:edit",
 ];
 
 export const MEMBER_DEFAULT_PERMISSIONS: Permission[] = [
@@ -81,22 +80,6 @@ export const ADMIN_DEFAULT_PERMISSIONS: Permission[] = [
   "user:delete",
 ];
 
-export const SUPERADMIN_DEFAULT_PERMISSIONS: Permission[] = [
-  ...ALL_PERMISSIONS,
-];
-
-export function normalizeRole(source: any): UserRole {
-  if (source?.role === "superadmin") return "superadmin";
-  if (source?.role === "admin") return "admin";
-  return "member";
-}
-
-export function getDefaultPermissionsByRole(role: UserRole): Permission[] {
-  if (role === "superadmin") return [...SUPERADMIN_DEFAULT_PERMISSIONS];
-  if (role === "admin") return [...ADMIN_DEFAULT_PERMISSIONS];
-  return [...MEMBER_DEFAULT_PERMISSIONS];
-}
-
 export function normalizePermissions(source: any): Permission[] {
   if (Array.isArray(source?.permissions)) {
     return Array.from(
@@ -108,6 +91,27 @@ export function normalizePermissions(source: any): Permission[] {
     ) as Permission[];
   }
 
-  const role = normalizeRole(source);
-  return getDefaultPermissionsByRole(role);
+  return [];
+}
+
+export function hasPermission(
+  user: UserItem | null | undefined,
+  permission: Permission
+): boolean {
+  if (!user) return false;
+
+  const permissions = normalizePermissions(user);
+  return permissions.includes(permission);
+}
+
+export function hasAnyPermission(
+  user: UserItem | null | undefined,
+  permissionsToCheck: Permission[]
+): boolean {
+  if (!user) return false;
+
+  const permissions = normalizePermissions(user);
+  return permissionsToCheck.some((permission) =>
+    permissions.includes(permission)
+  );
 }

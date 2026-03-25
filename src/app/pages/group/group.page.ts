@@ -112,6 +112,7 @@ export class GroupPage implements OnInit {
 
   openEdit(g: Group) {
     if (!this.hasPermission("group:edit")) return;
+    if (!this.canAccessGroup(g.id)) return;
 
     this.form = {
       id: g.id,
@@ -124,6 +125,7 @@ export class GroupPage implements OnInit {
 
   openView(g: Group) {
     if (!this.hasPermission("group:view")) return;
+    if (!this.canAccessGroup(g.id)) return;
 
     this.selected = g;
     this.viewOpen = true;
@@ -186,6 +188,7 @@ export class GroupPage implements OnInit {
 
   askDelete(g: Group) {
     if (!this.hasPermission("group:delete")) return;
+    if (!this.canAccessGroup(g.id)) return;
 
     this.confirm.confirm({
       header: "Eliminar grupo",
@@ -222,6 +225,7 @@ export class GroupPage implements OnInit {
 
     return groups.filter((group) => {
       const members = membershipMap[group.id] || [];
+
       return members.some(
         (member) =>
           (member.username || "").trim().toLowerCase() ===

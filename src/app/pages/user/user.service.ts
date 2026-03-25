@@ -1,13 +1,21 @@
 import { Injectable } from "@angular/core";
 import { BehaviorSubject } from "rxjs";
-import type { UserItem, UserRole, Permission } from "./user.model";
+import type { UserItem, Permission } from "./user.model";
 import {
+  ALL_PERMISSIONS,
+  MEMBER_DEFAULT_PERMISSIONS,
+  ADMIN_DEFAULT_PERMISSIONS,
   normalizePermissions,
-  normalizeRole,
-  getDefaultPermissionsByRole,
 } from "./user.model";
 
 const STORAGE_KEY = "demo_users";
+const CURRENT_USER_KEYS = [
+  "current_user",
+  "auth_user",
+  "session_user",
+  "user",
+  "logged_user",
+] as const;
 
 type UpsertPayload = Pick<
   UserItem,
@@ -18,7 +26,6 @@ type UpsertPayload = Pick<
   | "address"
   | "phone"
   | "birthDate"
-  | "role"
 > & {
   permissions?: Permission[];
 };
@@ -31,48 +38,14 @@ export class UserService {
   seedIfEmpty() {
     if (this.subject.value.length) return;
 
-    const superadmin: UserItem = {
-      username: "superadmin",
-      password: "SuperAdmin12345!",
-      email: "superadmin@demo.com",
-      fullName: "Super Administrador",
-      address: "Sistema",
-      phone: "0000000000",
-      birthDate: "2000-01-01",
-      createdAt: new Date().toISOString(),
-      role: "superadmin",
-      permissions: getDefaultPermissionsByRole("superadmin"),
-    };
+    const initial = this.getSystemUsers();
+    this.persist(initial);
+  }
 
-    const admin: UserItem = {
-      username: "admin",
-      password: "Admin12345!",
-      email: "admin@demo.com",
-      fullName: "Administrador del sistema",
-      address: "Sistema",
-      phone: "0000000001",
-      birthDate: "2000-01-01",
-      createdAt: new Date().toISOString(),
-      role: "admin",
-      permissions: getDefaultPermissionsByRole("admin"),
-    };
-
-    const member: UserItem = {
-      username: "member",
-      password: "Member12345!",
-      email: "member@demo.com",
-      fullName: "Usuario miembro",
-      address: "Sistema",
-      phone: "0000000002",
-      birthDate: "2000-01-01",
-      createdAt: new Date().toISOString(),
-      role: "member",
-      permissions: getDefaultPermissionsByRole("member"),
-    };
-
-    const initial = [superadmin, admin, member];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-    this.subject.next(initial);
+  ensureSystemUsers() {
+    const list = [...this.subject.value];
+    const merged = this.mergeMissingSystemUsers(list);
+    this.persist(merged);
   }
 
   getAll() {
@@ -87,21 +60,18 @@ export class UserService {
     );
   }
 
-  upsert(
-    payload: UpsertPayload,
-    username?: string,
-    actorRole: UserRole = "member"
-  ) {
+  upsert(payload: UpsertPayload, username?: string) {
     const list = [...this.subject.value];
-    const role = normalizeRole(payload);
-    const permissions =
-      actorRole === "superadmin"
-        ? this.normalizePermissionInput(payload.permissions, role)
-        : getDefaultPermissionsByRole(role);
+    const permissions = this.normalizePermissionInput(payload.permissions);
 
     if (username) {
-      const idx = list.findIndex((u) => u.username === username);
+      const idx = list.findIndex(
+        (u) => u.username.trim().toLowerCase() === username.trim().toLowerCase()
+      );
+
       if (idx >= 0) {
+        const previousUsername = list[idx].username;
+
         list[idx] = {
           ...list[idx],
           username: payload.username.trim(),
@@ -111,10 +81,10 @@ export class UserService {
           address: payload.address.trim(),
           phone: payload.phone.trim(),
           birthDate: payload.birthDate.trim(),
-          role,
           permissions,
         };
-        this.persist(list);
+
+        this.persist(list, previousUsername);
         return list[idx];
       }
     }
@@ -128,34 +98,123 @@ export class UserService {
       phone: payload.phone.trim(),
       birthDate: payload.birthDate.trim(),
       createdAt: new Date().toISOString(),
-      role,
       permissions,
     };
 
     list.unshift(created);
     this.persist(list);
+
     return created;
   }
 
   remove(username: string) {
-    const list = this.subject.value.filter((u) => u.username !== username);
-    this.persist(list);
+    const protectedUsers = ["superadmin", "admin", "member"];
+
+    if (protectedUsers.includes(username.trim().toLowerCase())) {
+      return;
+    }
+
+    const list = this.subject.value.filter(
+      (u) => u.username.trim().toLowerCase() !== username.trim().toLowerCase()
+    );
+
+    this.persist(list, username);
+  }
+
+  private getSystemUsers(): UserItem[] {
+    const now = new Date().toISOString();
+
+    const superadmin: UserItem = {
+      username: "superadmin",
+      password: "SuperAdmin12345!",
+      email: "superadmin@demo.com",
+      fullName: "Super Administrador",
+      address: "Sistema",
+      phone: "0000000000",
+      birthDate: "2000-01-01",
+      createdAt: now,
+      permissions: [...ALL_PERMISSIONS],
+    };
+
+    const admin: UserItem = {
+      username: "admin",
+      password: "Admin12345!",
+      email: "admin@demo.com",
+      fullName: "Administrador del sistema",
+      address: "Sistema",
+      phone: "0000000001",
+      birthDate: "2000-01-01",
+      createdAt: now,
+      permissions: [...ADMIN_DEFAULT_PERMISSIONS],
+    };
+
+    const member: UserItem = {
+      username: "member",
+      password: "Member12345!",
+      email: "member@demo.com",
+      fullName: "Usuario miembro",
+      address: "Sistema",
+      phone: "0000000002",
+      birthDate: "2000-01-01",
+      createdAt: now,
+      permissions: [...MEMBER_DEFAULT_PERMISSIONS],
+    };
+
+    return [superadmin, admin, member];
+  }
+
+  private mergeMissingSystemUsers(list: UserItem[]): UserItem[] {
+    const systemUsers = this.getSystemUsers();
+    const systemMap = new Map(
+      systemUsers.map((u) => [u.username.trim().toLowerCase(), u])
+    );
+
+    const merged = list.map((user) => {
+      const key = user.username.trim().toLowerCase();
+      const systemUser = systemMap.get(key);
+
+      if (!systemUser) {
+        return user;
+      }
+
+      return {
+        ...user,
+        password: systemUser.password,
+        email: systemUser.email,
+        fullName: systemUser.fullName,
+        address: systemUser.address,
+        phone: systemUser.phone,
+        birthDate: systemUser.birthDate,
+        permissions: [...systemUser.permissions],
+      };
+    });
+
+    const existingUsernames = new Set(
+      merged.map((u) => u.username.trim().toLowerCase())
+    );
+
+    const missing = systemUsers.filter(
+      (u) => !existingUsernames.has(u.username.trim().toLowerCase())
+    );
+
+    return [...merged, ...missing];
   }
 
   private normalizePermissionInput(
-    permissions: Permission[] | undefined,
-    role: UserRole
+    permissions: Permission[] | undefined
   ): Permission[] {
     if (!permissions?.length) {
-      return getDefaultPermissionsByRole(role);
+      return [...MEMBER_DEFAULT_PERMISSIONS];
     }
 
     const normalized = normalizePermissions({ permissions });
-    return normalized.length ? normalized : getDefaultPermissionsByRole(role);
+
+    return normalized.length ? normalized : [...MEMBER_DEFAULT_PERMISSIONS];
   }
 
-  private persist(list: UserItem[]) {
+  private persist(list: UserItem[], previousUsername?: string) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    this.syncCurrentSessionUsers(list, previousUsername);
     this.subject.next(list);
   }
 
@@ -163,19 +222,54 @@ export class UserService {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const users = raw ? (JSON.parse(raw) as UserItem[]) : [];
-      return users.map((user: any) => {
-        const role = normalizeRole(user);
-        return {
-          ...user,
-          role,
-          permissions: normalizePermissions({
-            ...user,
-            role,
-          }),
-        };
-      });
+
+      const normalized = users.map((user: any) => ({
+        ...user,
+        permissions: normalizePermissions(user),
+      }));
+
+      const merged = this.mergeMissingSystemUsers(normalized);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      this.syncCurrentSessionUsers(merged);
+
+      return merged;
     } catch {
-      return [];
+      const initial = this.getSystemUsers();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
+      this.syncCurrentSessionUsers(initial);
+      return initial;
+    }
+  }
+
+  private syncCurrentSessionUsers(list: UserItem[], previousUsername?: string) {
+    for (const key of CURRENT_USER_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+
+      try {
+        const current = JSON.parse(raw);
+        const currentUsername = String(current?.username ?? "")
+          .trim()
+          .toLowerCase();
+
+        if (!currentUsername) continue;
+
+        const updated =
+          list.find(
+            (u) =>
+              u.username.trim().toLowerCase() ===
+              (previousUsername
+                ? previousUsername.trim().toLowerCase()
+                : currentUsername)
+          ) ||
+          list.find(
+            (u) => u.username.trim().toLowerCase() === currentUsername
+          );
+
+        if (updated) {
+          localStorage.setItem(key, JSON.stringify(updated));
+        }
+      } catch { }
     }
   }
 }

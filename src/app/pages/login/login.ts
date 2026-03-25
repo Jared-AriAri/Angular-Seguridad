@@ -11,9 +11,10 @@ import { MessageModule } from "primeng/message";
 
 import type { UserItem } from "../user/user.model";
 import {
+  ALL_PERMISSIONS,
+  ADMIN_DEFAULT_PERMISSIONS,
+  MEMBER_DEFAULT_PERMISSIONS,
   normalizePermissions,
-  normalizeRole,
-  getDefaultPermissionsByRole,
 } from "../user/user.model";
 
 const USERS_KEY = "demo_users";
@@ -64,8 +65,7 @@ export class LoginComponent implements OnInit {
         phone: "0000000000",
         birthDate: "2000-01-01",
         createdAt: now,
-        role: "superadmin",
-        permissions: getDefaultPermissionsByRole("superadmin"),
+        permissions: [...ALL_PERMISSIONS],
       };
 
       const admin: UserItem = {
@@ -77,8 +77,7 @@ export class LoginComponent implements OnInit {
         phone: "0000000001",
         birthDate: "2000-01-01",
         createdAt: now,
-        role: "admin",
-        permissions: getDefaultPermissionsByRole("admin"),
+        permissions: [...ADMIN_DEFAULT_PERMISSIONS],
       };
 
       const member: UserItem = {
@@ -90,8 +89,7 @@ export class LoginComponent implements OnInit {
         phone: "0000000002",
         birthDate: "2000-01-01",
         createdAt: now,
-        role: "member",
-        permissions: getDefaultPermissionsByRole("member"),
+        permissions: [...MEMBER_DEFAULT_PERMISSIONS],
       };
 
       localStorage.setItem(
@@ -106,17 +104,10 @@ export class LoginComponent implements OnInit {
       const raw = localStorage.getItem(USERS_KEY);
       const users = raw ? (JSON.parse(raw) as UserItem[]) : [];
 
-      return users.map((user: any) => {
-        const role = normalizeRole(user);
-        return {
-          ...user,
-          role,
-          permissions: normalizePermissions({
-            ...user,
-            role,
-          }),
-        };
-      });
+      return users.map((user: any) => ({
+        ...user,
+        permissions: normalizePermissions(user),
+      }));
     } catch {
       return [];
     }
@@ -150,14 +141,12 @@ export class LoginComponent implements OnInit {
 
     localStorage.setItem("loggedIn", "true");
     localStorage.setItem("currentUsername", validUser.username);
-    localStorage.setItem("currentUserRole", validUser.role);
     localStorage.setItem(
       "currentUser",
       JSON.stringify({
         username: validUser.username,
         fullName: validUser.fullName,
         email: validUser.email,
-        role: validUser.role,
         permissions: validUser.permissions,
       })
     );

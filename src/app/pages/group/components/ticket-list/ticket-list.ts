@@ -19,10 +19,10 @@ export class TicketListComponent {
 
   statusOptions = [
     { label: "Todos", value: null },
-    { label: "Pendiente", value: "pendiente" },
-    { label: "En progreso", value: "en_progreso" },
-    { label: "Revisión", value: "revision" },
-    { label: "Finalizado", value: "finalizado" }
+    { label: "Pendiente", value: "pending" },
+    { label: "En progreso", value: "in_progress" },
+    { label: "Revisión", value: "review" },
+    { label: "Finalizado", value: "completed" }
   ];
 
   onRowSelect(event: any) {

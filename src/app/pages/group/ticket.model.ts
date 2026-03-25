@@ -1,5 +1,26 @@
-export type TicketStatus = 'pendiente' | 'en_progreso' | 'revision' | 'finalizado';
-export type TicketPriority = '最高' | '高' | '中高' | '中' | '中低' | '低' | '最低' | 'alta' | 'media' | 'baja'; // keep backwards compat
+export type TicketStatus =
+  | "pendiente"
+  | "en_progreso"
+  | "revision"
+  | "finalizado"
+  | "bloqueado"
+  | "pending"
+  | "in_progress"
+  | "review"
+  | "completed"
+  | "blocked";
+
+export type TicketPriority =
+  | "alta"
+  | "media"
+  | "baja"
+  | "highest"
+  | "high"
+  | "medium_high"
+  | "medium"
+  | "medium_low"
+  | "low"
+  | "lowest";
 
 export interface TicketComment {
   id: string;
@@ -19,12 +40,19 @@ export interface Ticket {
   id: string;
   title: string;
   description: string;
+
   status: TicketStatus;
   priority: TicketPriority;
-  assignedTo: string;
+
+  assignedTo: string | null;
+
+  createdBy: string;
+
   createdAt: string;
   dueDate: string | null;
+
   groupId: string;
+
   comments: TicketComment[];
   history: TicketHistoryItem[];
 }

@@ -21,6 +21,7 @@ type StoredUser = {
   phone: string;
   birthDate: string;
   createdAt: string;
+  permissions?: string[];
 };
 
 type GroupMember = {
@@ -31,6 +32,22 @@ type GroupMember = {
 
 const USERS_STORAGE_KEY = "demo_users";
 const GROUP_MEMBERS_STORAGE_KEY = "group_members";
+
+const CURRENT_USER_JSON_KEYS = [
+  "currentUser",
+  "user",
+  "sessionUser",
+  "current_user",
+  "auth_user",
+  "session_user",
+  "logged_user",
+] as const;
+
+const CURRENT_USER_DIRECT_KEYS = [
+  "currentUsername",
+  "username",
+  "loggedUsername",
+] as const;
 
 @Component({
   selector: "app-group-members-modal",
@@ -48,6 +65,9 @@ export class GroupMembersModalComponent implements OnChanges {
   userOptions: { label: string; value: string }[] = [];
   selectedUsername = "";
 
+  canViewGroupMembers = false;
+  canManageGroupMembers = false;
+
   ngOnChanges(changes: SimpleChanges) {
     const visibleChanged = !!changes["visible"];
     const groupChanged = !!changes["groupId"];
@@ -55,6 +75,7 @@ export class GroupMembersModalComponent implements OnChanges {
     if ((visibleChanged && this.visible) || groupChanged) {
       this.loadUsers();
       this.loadMembers();
+      this.resolveAccess();
       this.buildUserOptions();
     }
 
@@ -66,6 +87,74 @@ export class GroupMembersModalComponent implements OnChanges {
   close() {
     this.selectedUsername = "";
     this.closeModal.emit();
+  }
+
+  private getCurrentUsername(): string | null {
+    for (const key of CURRENT_USER_DIRECT_KEYS) {
+      const value = localStorage.getItem(key);
+      if (value && value.trim()) return value.trim();
+    }
+
+    for (const key of CURRENT_USER_JSON_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed?.username) return String(parsed.username).trim();
+      } catch { }
+    }
+
+    return null;
+  }
+
+  private getCurrentUser(): StoredUser | null {
+    const currentUsername = this.getCurrentUsername();
+    if (!currentUsername) return null;
+
+    return (
+      this.users.find(
+        (user) =>
+          user.username.trim().toLowerCase() ===
+          currentUsername.trim().toLowerCase()
+      ) || null
+    );
+  }
+
+  private hasPermission(permission: string): boolean {
+    const currentUser = this.getCurrentUser();
+    const permissions = Array.isArray(currentUser?.permissions)
+      ? currentUser!.permissions
+      : [];
+
+    return permissions.includes(permission);
+  }
+
+  private isCurrentUserMemberOfThisGroup(): boolean {
+    const currentUsername = this.getCurrentUsername();
+    if (!currentUsername) return false;
+
+    return this.members.some(
+      (member) =>
+        member.username.trim().toLowerCase() ===
+        currentUsername.trim().toLowerCase()
+    );
+  }
+
+  private resolveAccess() {
+    const canManage =
+      this.hasPermission("group:members") || this.hasPermission("group:edit");
+
+    const isMember = this.isCurrentUserMemberOfThisGroup();
+
+    this.canManageGroupMembers = canManage;
+    this.canViewGroupMembers = canManage || isMember;
+
+    if (!this.canViewGroupMembers) {
+      this.members = [];
+      this.userOptions = [];
+      this.selectedUsername = "";
+    }
   }
 
   loadUsers() {
@@ -88,6 +177,11 @@ export class GroupMembersModalComponent implements OnChanges {
   }
 
   buildUserOptions() {
+    if (!this.canManageGroupMembers) {
+      this.userOptions = [];
+      return;
+    }
+
     const memberSet = new Set(
       this.members.map((member) => member.username.trim().toLowerCase())
     );
@@ -101,20 +195,25 @@ export class GroupMembersModalComponent implements OnChanges {
   }
 
   saveMembers(nextMembers: GroupMember[]) {
+    if (!this.canManageGroupMembers) return;
+
     try {
       const raw = localStorage.getItem(GROUP_MEMBERS_STORAGE_KEY);
       const all = raw ? JSON.parse(raw) : {};
       all[this.groupId] = nextMembers;
       localStorage.setItem(GROUP_MEMBERS_STORAGE_KEY, JSON.stringify(all));
       this.members = nextMembers;
+      this.resolveAccess();
       this.buildUserOptions();
     } catch {
       this.members = nextMembers;
+      this.resolveAccess();
       this.buildUserOptions();
     }
   }
 
   addMember() {
+    if (!this.canManageGroupMembers) return;
     if (!this.selectedUsername || !this.groupId) return;
 
     const exists = this.members.some(
@@ -150,13 +249,19 @@ export class GroupMembersModalComponent implements OnChanges {
   }
 
   removeMember(username: string) {
+    if (!this.canManageGroupMembers) return;
+
     const nextMembers = this.members.filter(
       (member) =>
         member.username.trim().toLowerCase() !== username.trim().toLowerCase()
     );
 
     this.saveMembers(nextMembers);
-    if (this.selectedUsername.trim().toLowerCase() === username.trim().toLowerCase()) {
+
+    if (
+      this.selectedUsername.trim().toLowerCase() ===
+      username.trim().toLowerCase()
+    ) {
       this.selectedUsername = "";
     }
   }

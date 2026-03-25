@@ -15,9 +15,6 @@
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           <button *ngIf="hasPermission('user:create')" pButton type="button" icon="pi pi-plus" label="Nuevo"
             class="p-button-success" (click)="openCreate()"></button>
-
-          <button *ngIf="hasPermission('user:create')" pButton type="button" icon="pi pi-shield" label="Nuevo admin"
-            class="p-button-warning" (click)="openCreateAdmin()"></button>
         </div>
       </ng-template>
 
@@ -142,7 +139,7 @@
       </span>
     </div>
 
-    <div class="field col-12" *ngIf="isSuperAdmin()">
+    <div class="field col-12" *ngIf="canAssignPermissions()">
       <label>Preset de permisos</label>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <button pButton type="button" label="Member" class="p-button-outlined p-button-sm"
@@ -153,7 +150,7 @@
       </div>
     </div>
 
-    <div class="field col-12" *ngIf="isSuperAdmin()">
+    <div class="field col-12" *ngIf="canAssignPermissions()">
       <label>Permisos</label>
       <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px;">
         <button *ngFor="let option of permissionOptions" pButton type="button" class="p-button-sm"
@@ -162,8 +159,9 @@
       </div>
     </div>
 
-    <div class="field col-12" *ngIf="!isSuperAdmin()">
-      <p-message severity="info" text="Solo el superadmin puede asignar permisos manualmente."></p-message>
+    <div class="field col-12" *ngIf="!canAssignPermissions()">
+      <p-message severity="info"
+        text="Solo usuarios con permiso de edición pueden asignar permisos manualmente."></p-message>
     </div>
   </div>
 

@@ -62,7 +62,7 @@ export class GroupDetailPage implements OnInit {
     private groupService: GroupService,
     private ticketService: TicketService,
     private authContext: AuthContextService
-  ) {}
+  ) { }
 
   ngOnInit() {
     if (!this.hasPermission("group:view")) {
@@ -103,19 +103,36 @@ export class GroupDetailPage implements OnInit {
     }
 
     this.tickets = this.ticketService.getByGroup(this.groupId);
+
     if (this.currentFilter) {
-       this.applyFilter(this.currentFilter);
+      this.applyFilter(this.currentFilter);
     } else {
-       this.filteredTickets = [...this.tickets];
+      this.filteredTickets = [...this.tickets];
     }
   }
 
   filteredTickets: Ticket[] = [];
-  currentFilter: 'all' | 'mine' | 'unassigned' | 'high_priority' = 'all';
+  currentFilter: "all" | "mine" | "unassigned" | "high_priority" = "all";
 
-  get totalTickets() { return this.tickets.length; }
-  get pendingTickets() { return this.tickets.filter(t => t.status === 'pendiente' || t.status === 'en_progreso').length; }
-  get completedTickets() { return this.tickets.filter(t => t.status === 'finalizado').length; }
+  get totalTickets() {
+    return this.tickets.length;
+  }
+
+  get pendingTickets() {
+    return this.tickets.filter(
+      (t) =>
+        t.status === "pendiente" ||
+        t.status === "pending" ||
+        t.status === "en_progreso" ||
+        t.status === "in_progress"
+    ).length;
+  }
+
+  get completedTickets() {
+    return this.tickets.filter(
+      (t) => t.status === "finalizado" || t.status === "completed"
+    ).length;
+  }
 
   openCreateTicket() {
     if (!this.hasPermission("ticket:create")) return;
@@ -159,30 +176,37 @@ export class GroupDetailPage implements OnInit {
     return (
       this.hasPermission("ticket:comment") &&
       (ticket.assignedTo || "").trim().toLowerCase() ===
-        currentUser.username.trim().toLowerCase()
+      currentUser.username.trim().toLowerCase()
     );
   }
 
-  applyFilter(filterType: 'all' | 'mine' | 'unassigned' | 'high_priority') {
+  applyFilter(filterType: "all" | "mine" | "unassigned" | "high_priority") {
     this.currentFilter = filterType;
     const currentUser = this.authContext.getCurrentUser();
 
-    if (filterType === 'all') {
+    if (filterType === "all") {
       this.filteredTickets = [...this.tickets];
-    } else if (filterType === 'mine') {
-      this.filteredTickets = this.tickets.filter(t => 
-        (t.assignedTo || "").trim().toLowerCase() === (currentUser?.username || "").trim().toLowerCase()
+    } else if (filterType === "mine") {
+      this.filteredTickets = this.tickets.filter(
+        (t) =>
+          (t.assignedTo || "").trim().toLowerCase() ===
+          (currentUser?.username || "").trim().toLowerCase()
       );
-    } else if (filterType === 'unassigned') {
-      this.filteredTickets = this.tickets.filter(t => !t.assignedTo || t.assignedTo.trim() === "");
-    } else if (filterType === 'high_priority') {
-      this.filteredTickets = this.tickets.filter(t => t.priority === '最高' || t.priority === '高' || t.priority === 'alta');
+    } else if (filterType === "unassigned") {
+      this.filteredTickets = this.tickets.filter(
+        (t) => !t.assignedTo || t.assignedTo.trim() === ""
+      );
+    } else if (filterType === "high_priority") {
+      this.filteredTickets = this.tickets.filter(
+        (t) =>
+          t.priority === "alta" ||
+          t.priority === "highest" ||
+          t.priority === "high"
+      );
     }
   }
 
-  onTicketStatusChange(event: {ticket: Ticket, newStatus: string}) {
-    // Ticket status was already mapped to the ticket object by the Kanban component
-    // we just need to persist it and reload
+  onTicketStatusChange(event: { ticket: Ticket; newStatus: string }) {
     this.ticketService.update(event.ticket);
     this.loadTickets();
     this.applyFilter(this.currentFilter);
