@@ -1,0 +1,101 @@
+<p-dialog [(visible)]="visible" [modal]="true" [style]="{width:'640px', maxWidth: '95vw'}"
+  [header]="'Detalle del Ticket'" (onHide)="close()">
+
+  <ng-container *ngIf="editableTicket">
+
+    <div class="p-fluid">
+
+      <div class="field mb-3">
+        <label class="font-bold">Título</label>
+        <input pInputText [(ngModel)]="editableTicket.titulo" [disabled]="!canEditTicket" />
+      </div>
+
+      <div class="field mb-3">
+        <label class="font-bold">Descripción</label>
+        <textarea pTextarea rows="3" [(ngModel)]="editableTicket.descripcion" [disabled]="!canEditTicket"></textarea>
+      </div>
+
+      <div class="grid mb-3">
+        <div class="col-12 md:col-6">
+          <div class="field">
+            <label class="font-bold">Estado</label>
+            <p-select [options]="statusOptions" [(ngModel)]="editableTicket.estado_id" optionLabel="label"
+              optionValue="value" [disabled]="!canEditTicket" appendTo="body"></p-select>
+          </div>
+        </div>
+
+        <div class="col-12 md:col-6">
+          <div class="field">
+            <label class="font-bold">Prioridad</label>
+            <p-select [options]="priorityOptions" [(ngModel)]="editableTicket.prioridad_id" optionLabel="label"
+              optionValue="value" [disabled]="!canEditTicket" appendTo="body"></p-select>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid mb-3">
+        <div class="col-12 md:col-6">
+          <div class="field">
+            <label class="font-bold">Asignado a</label>
+            <p-select [options]="assignedOptions" [(ngModel)]="editableTicket.asignado_id" optionLabel="label"
+              optionValue="value" [disabled]="!canEditTicket" placeholder="Seleccionar usuario"
+              appendTo="body"></p-select>
+          </div>
+        </div>
+
+        <div class="col-12 md:col-6">
+          <div class="field">
+            <label class="font-bold">Fecha límite</label>
+            <p-datepicker [(ngModel)]="editableTicket.fecha_final" [disabled]="!canEditTicket" dateFormat="yy-mm-dd"
+              [showIcon]="true" appendTo="body"></p-datepicker>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <hr class="my-4" style="opacity: 0.2;">
+
+    <div class="comments-section">
+      <label class="font-bold block mb-2">Comentarios ({{ comentarios.length }})</label>
+
+      <div class="comments-list mb-3" style="max-height: 200px; overflow-y: auto;">
+        <div *ngFor="let c of comentarios" class="mb-3 p-2 border-round shadow-1" style="background: #f8fafc;">
+          <div class="flex justify-content-between align-items-center mb-1">
+            <p-tag severity="secondary" [value]="c.usuarios?.nombre_completo || c.usuarios?.username"></p-tag>
+            <small class="text-500">{{ c.creado_en | date:'short' }}</small>
+          </div>
+          <div class="text-700 ml-1">{{ c.contenido }}</div>
+        </div>
+      </div>
+
+      <div class="p-inputgroup mt-2">
+        <input pInputText [(ngModel)]="newComment" placeholder="Escribe un comentario..." (keyup.enter)="addComment()"
+          [disabled]="!canEditTicket" />
+        <button pButton icon="pi pi-send" (click)="addComment()"
+          [disabled]="!canEditTicket || !newComment.trim()"></button>
+      </div>
+    </div>
+
+    <div class="history-section mt-4" *ngIf="historial.length">
+      <label class="font-bold block mb-2 text-sm opacity-60">Historial reciente</label>
+      <div class="text-xs text-500">
+        <div *ngFor="let h of historial.slice(0, 3)" class="mb-1">
+          • {{ h.accion }}: {{ h.detalles?.nuevo_estado || '' }} ({{ h.usuarios?.nombre_completo }}) - {{ h.creado_en |
+          date:'shortDate' }}
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-content-end gap-2">
+      <button pButton label="Guardar cambios" icon="pi pi-check" (click)="save()" [disabled]="!canEditTicket"></button>
+
+      <button pButton label="Cerrar" icon="pi pi-times" class="p-button-secondary p-button-text"
+        (click)="close()"></button>
+    </div>
+  </ng-template>
+
+</p-dialog>

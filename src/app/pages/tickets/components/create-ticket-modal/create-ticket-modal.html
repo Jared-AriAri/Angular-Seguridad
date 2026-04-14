@@ -1,0 +1,46 @@
+<p-dialog header="Crear ticket" [(visible)]="visible" [modal]="true" [closable]="true" [dismissableMask]="true"
+  [draggable]="false" [resizable]="false" [style]="{ width: '640px', maxWidth: '96vw' }" (onHide)="close()">
+  <div class="ticket-modal-form">
+    <div class="field mb-3">
+      <label for="titulo" class="font-bold block mb-2">Título *</label>
+      <input id="titulo" pInputText class="w-full" [(ngModel)]="form.titulo"
+        placeholder="Ej. Error en inicio de sesión" />
+    </div>
+
+    <div class="field mb-3">
+      <label for="descripcion" class="font-bold block mb-2">Descripción</label>
+      <textarea id="descripcion" pTextarea class="w-full" rows="4" [(ngModel)]="form.descripcion"
+        placeholder="Detalles del ticket..."></textarea>
+    </div>
+
+    <div class="grid mb-3">
+      <div class="col-12 md:col-6">
+        <div class="field">
+          <label for="prioridad" class="font-bold block mb-2">Prioridad *</label>
+          <p-select id="prioridad" [options]="priorityOptions" [(ngModel)]="form.prioridad_id" optionLabel="label"
+            optionValue="value" appendTo="body" styleClass="w-full"></p-select>
+        </div>
+      </div>
+
+      <div class="col-12 md:col-6">
+        <div class="field">
+          <label for="asignado" class="font-bold block mb-2">Asignado a</label>
+          <p-select id="asignado" [options]="assignedOptions" [(ngModel)]="form.asignado_id" optionLabel="label"
+            optionValue="value" placeholder="Selecciona un usuario" appendTo="body" styleClass="w-full"></p-select>
+        </div>
+      </div>
+    </div>
+
+    <div class="field mb-4">
+      <label for="fecha_final" class="font-bold block mb-2">Fecha límite</label>
+      <p-datepicker id="fecha_final" [(ngModel)]="form.fecha_final" [showIcon]="true" [showButtonBar]="true"
+        dateFormat="yy-mm-dd" appendTo="body" styleClass="w-full" inputStyleClass="w-full"></p-datepicker>
+    </div>
+
+    <div class="ticket-modal-actions mt-4 flex justify-content-end gap-2">
+      <button pButton type="button" label="Cancelar" class="p-button-secondary p-button-text" (click)="close()"
+        [disabled]="isSaving"></button>
+      <button pButton type="button" label="Guardar" (click)="save()" [disabled]="isSaving"></button>
+    </div>
+  </div>
+</p-dialog>

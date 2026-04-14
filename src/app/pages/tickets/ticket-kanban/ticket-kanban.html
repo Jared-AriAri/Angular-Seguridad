@@ -1,0 +1,130 @@
+<div class="ticket-kanban-board flex gap-4 overflow-x-auto pb-4" cdkDropListGroup>
+
+  <div class="ticket-kanban-column w-20rem flex-shrink-0">
+    <div class="flex justify-content-between align-items-center mb-3">
+      <div class="ticket-kanban-column-title font-bold uppercase text-sm text-gray-400">Pendiente</div>
+      <p-tag [value]="pending.length.toString()" severity="secondary"></p-tag>
+    </div>
+    <div cdkDropList [cdkDropListData]="pending" (cdkDropListDropped)="drop($event, 'Pendiente')"
+      class="ticket-kanban-stack bg-gray-900 border-round p-2 border-1 border-gray-800" style="min-height: 200px;">
+
+      <p-card *ngFor="let ticket of pending" cdkDrag
+        styleClass="ticket-card mb-3 shadow-2 border-left-3 border-orange-500" (click)="onTicketClick(ticket)"
+        [style]="{ cursor: 'pointer' }">
+        <div class="ticket-card-title font-bold text-white">{{ ticket.titulo }}</div>
+        <div class="ticket-card-text text-sm text-gray-500 mt-2 line-height-3">{{ ticket.descripcion | slice:0:80 }}{{
+          ticket.descripcion && ticket.descripcion.length > 80 ? '...' : '' }}</div>
+
+        <div class="ticket-card-footer flex justify-content-between align-items-center mt-3">
+          <p-tag [value]="ticket.prioridades?.nombre" [severity]="getPrioritySeverity(ticket)"></p-tag>
+
+          <div class="flex gap-1" *ngIf="isOwner(ticket)">
+            <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-sm p-button-info"
+              (click)="editTicket(ticket, $event)"></button>
+            <button pButton icon="pi pi-trash" class="p-button-rounded p-button-text p-button-sm p-button-danger"
+              (click)="deleteTicket(ticket, $event)"></button>
+          </div>
+        </div>
+      </p-card>
+    </div>
+  </div>
+
+  <div class="ticket-kanban-column w-20rem flex-shrink-0">
+    <div class="flex justify-content-between align-items-center mb-3">
+      <div class="ticket-kanban-column-title font-bold uppercase text-sm text-gray-400">En progreso</div>
+      <p-tag [value]="inProgress.length.toString()" severity="info"></p-tag>
+    </div>
+    <div cdkDropList [cdkDropListData]="inProgress" (cdkDropListDropped)="drop($event, 'En progreso')"
+      class="ticket-kanban-stack bg-gray-900 border-round p-2 border-1 border-gray-800" style="min-height: 200px;">
+
+      <p-card *ngFor="let ticket of inProgress" cdkDrag
+        styleClass="ticket-card mb-3 shadow-2 border-left-3 border-blue-500" (click)="onTicketClick(ticket)"
+        [style]="{ cursor: 'pointer' }">
+        <div class="ticket-card-title font-bold text-white">{{ ticket.titulo }}</div>
+        <div class="ticket-card-text text-sm text-gray-500 mt-2 line-height-3">{{ ticket.descripcion | slice:0:80 }}...
+        </div>
+        <div class="ticket-card-footer flex justify-content-between align-items-center mt-3">
+          <p-tag [value]="ticket.prioridades?.nombre" [severity]="getPrioritySeverity(ticket)"></p-tag>
+          <div class="flex gap-1" *ngIf="isOwner(ticket)">
+            <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-sm p-button-info"
+              (click)="editTicket(ticket, $event)"></button>
+          </div>
+        </div>
+      </p-card>
+    </div>
+  </div>
+
+  <div class="ticket-kanban-column w-20rem flex-shrink-0">
+    <div class="flex justify-content-between align-items-center mb-3">
+      <div class="ticket-kanban-column-title font-bold uppercase text-sm text-gray-400">Revisión</div>
+      <p-tag [value]="review.length.toString()" severity="contrast"></p-tag>
+    </div>
+    <div cdkDropList [cdkDropListData]="review" (cdkDropListDropped)="drop($event, 'Revision')"
+      class="ticket-kanban-stack bg-gray-900 border-round p-2 border-1 border-gray-800" style="min-height: 200px;">
+
+      <p-card *ngFor="let ticket of review" cdkDrag
+        styleClass="ticket-card mb-3 shadow-2 border-left-3 border-purple-500" (click)="onTicketClick(ticket)"
+        [style]="{ cursor: 'pointer' }">
+        <div class="ticket-card-title font-bold text-white">{{ ticket.titulo }}</div>
+        <div class="ticket-card-text text-sm text-gray-500 mt-2 line-height-3 text-italic">A la espera de
+          confirmación...</div>
+        <div class="ticket-card-footer flex justify-content-between align-items-center mt-3">
+          <p-tag [value]="ticket.prioridades?.nombre" [severity]="getPrioritySeverity(ticket)"></p-tag>
+          <div class="flex gap-1" *ngIf="isOwner(ticket)">
+            <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-sm p-button-info"
+              (click)="editTicket(ticket, $event)"></button>
+          </div>
+        </div>
+      </p-card>
+    </div>
+  </div>
+
+  <div class="ticket-kanban-column w-20rem flex-shrink-0">
+    <div class="flex justify-content-between align-items-center mb-3">
+      <div class="ticket-kanban-column-title font-bold uppercase text-sm text-gray-400">Bloqueado</div>
+      <p-tag [value]="blocked.length.toString()" severity="danger"></p-tag>
+    </div>
+    <div cdkDropList [cdkDropListData]="blocked" (cdkDropListDropped)="drop($event, 'Bloqueado')"
+      class="ticket-kanban-stack bg-gray-900 border-round p-2 border-1 border-gray-800" style="min-height: 200px;">
+
+      <p-card *ngFor="let ticket of blocked" cdkDrag
+        styleClass="ticket-card mb-3 shadow-2 border-left-3 border-pink-600" (click)="onTicketClick(ticket)"
+        [style]="{ cursor: 'pointer' }">
+        <div class="ticket-card-title font-bold text-white">{{ ticket.titulo }}</div>
+        <div class="ticket-card-text text-sm text-pink-300 mt-2"><i class="pi pi-exclamation-triangle mr-1"></i>
+          Requiere atención</div>
+        <div class="ticket-card-footer flex justify-content-between align-items-center mt-3">
+          <p-tag [value]="ticket.prioridades?.nombre" severity="danger"></p-tag>
+          <div class="flex gap-1" *ngIf="isOwner(ticket)">
+            <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-sm p-button-info"
+              (click)="editTicket(ticket, $event)"></button>
+          </div>
+        </div>
+      </p-card>
+    </div>
+  </div>
+
+  <div class="ticket-kanban-column w-20rem flex-shrink-0">
+    <div class="flex justify-content-between align-items-center mb-3">
+      <div class="ticket-kanban-column-title font-bold uppercase text-sm text-gray-400">Finalizado</div>
+      <p-tag [value]="done.length.toString()" severity="success"></p-tag>
+    </div>
+    <div cdkDropList [cdkDropListData]="done" (cdkDropListDropped)="drop($event, 'Finalizado')"
+      class="ticket-kanban-stack bg-gray-900 border-round p-2 border-1 border-gray-800" style="min-height: 200px;">
+
+      <p-card *ngFor="let ticket of done" cdkDrag
+        styleClass="ticket-card mb-3 shadow-2 border-left-3 border-green-500 opacity-70" (click)="onTicketClick(ticket)"
+        [style]="{ cursor: 'pointer' }">
+        <div class="ticket-card-title font-bold text-white line-through">{{ ticket.titulo }}</div>
+        <div class="ticket-card-footer flex justify-content-between align-items-center mt-3">
+          <p-tag [value]="'Cerrado'" severity="success"></p-tag>
+          <div class="flex gap-1" *ngIf="isOwner(ticket)">
+            <button pButton icon="pi pi-trash" class="p-button-rounded p-button-text p-button-sm p-button-danger"
+              (click)="deleteTicket(ticket, $event)"></button>
+          </div>
+        </div>
+      </p-card>
+    </div>
+  </div>
+
+</div>

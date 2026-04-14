@@ -1,129 +1,70 @@
-<p-toast *ngIf="hasPermission('group:view')"></p-toast>
-<p-confirmDialog *ngIf="hasPermission('group:view')"></p-confirmDialog>
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
 
-<p-card
-  *ngIf="hasPermission('group:view')"
-  styleClass="auth-card auth-card--premium"
-  [style]="{ width: '980px', maxWidth: '96vw' }"
->
+<p-card *ngIf="hasPermission('group:view')" styleClass="auth-card auth-card--premium"
+  [style]="{ width: '1000px', maxWidth: '96vw' }">
   <ng-template pTemplate="header">
     <div class="auth-head">
-      <div class="auth-title">Groups</div>
-      <div class="auth-subtitle">CRUD con PrimeNG + localStorage</div>
+      <div class="auth-title">Grupos</div>
+      <div class="auth-subtitle">Gestión centralizada de equipos y departamentos</div>
     </div>
   </ng-template>
 
   <div class="auth-body">
-    <p-toolbar>
+    <p-toolbar styleClass="mb-3">
       <ng-template pTemplate="start">
-        <button
-          *ngIf="hasPermission('group:create')"
-          pButton
-          type="button"
-          icon="pi pi-plus"
-          label="Nuevo"
-          class="p-button-success"
-          (click)="openCreate()"
-        ></button>
+        <button *ngIf="hasPermission('group:create')" pButton type="button" icon="pi pi-plus" label="Nuevo Grupo"
+          class="p-button-success" (click)="openCreate()"></button>
       </ng-template>
 
       <ng-template pTemplate="end">
         <span class="p-input-icon-left w-full auth-input" style="max-width: 320px;">
           <i class="pi pi-search"></i>
-          <input
-            pInputText
-            type="text"
-            class="w-full"
-            [(ngModel)]="q"
-            placeholder="Buscar..."
-          />
+          <input pInputText type="text" class="w-full" (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+            placeholder="Buscar por nombre..." />
         </span>
       </ng-template>
     </p-toolbar>
 
-    <div style="margin-top: 12px;">
-      <p-table
-        [value]="groups"
-        [loading]="loading"
-        [paginator]="true"
-        [rows]="8"
-        [rowsPerPageOptions]="[8, 16, 32]"
-        [globalFilterFields]="['name', 'description', 'status']"
-        [filters]="{ global: { value: q, matchMode: 'contains' } }"
-      >
+    <div class="mt-2">
+      <p-table #dt [value]="groups" [loading]="loading" [paginator]="true" [rows]="10"
+        [globalFilterFields]="['nombre', 'descripcion']" styleClass="p-datatable-sm">
+
         <ng-template pTemplate="header">
           <tr>
-            <th style="width: 28%;">Nombre</th>
+            <th style="width: 30%;">Nombre</th>
             <th>Descripción</th>
-            <th style="width: 140px;">Estado</th>
-            <th style="width: 240px; text-align: right;">Acciones</th>
+            <th style="width: 120px;">Estado</th>
+            <th style="width: 220px; text-align: right;">Acciones</th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-g>
           <tr>
             <td>
-              <div style="font-weight: 800;">{{ g.name }}</div>
-              <div style="font-size: 12px; opacity: 0.7;">
-                {{ g.updatedAt | date: "short" }}
+              <div class="font-bold text-lg" style="color: var(--primary-color);">{{ g.nombre }}</div>
+              <div class="text-xs opacity-60">
+                Creado: {{ g.creado_en | date: "mediumDate" }}
               </div>
             </td>
-
-            <td>{{ g.description || "—" }}</td>
-
+            <td class="text-sm">{{ g.descripcion || "Sin descripción disponible" }}</td>
             <td>
-              <p-tag
-                [value]="statusLabel(g.status)"
-                [severity]="statusSeverity(g.status)"
-              ></p-tag>
+              <p-tag [value]="g.estado === 'inactivo' ? 'Inactivo' : 'Activo'"
+                [severity]="g.estado === 'inactivo' ? 'secondary' : 'success'"></p-tag>
             </td>
-
             <td style="text-align: right; white-space: nowrap;">
-              <button
-                *ngIf="hasPermission('group:view')"
-                pButton
-                type="button"
-                icon="pi pi-folder-open"
-                class="p-button-text"
-                (click)="openGroup(g)"
-                pTooltip="Abrir grupo"
-              ></button>
+              <button pButton type="button" icon="pi pi-external-link" class="p-button-text p-button-rounded"
+                (click)="openGroup(g)" pTooltip="Abrir Panel"></button>
 
-              <button
-                *ngIf="hasPermission('group:view')"
-                pButton
-                type="button"
-                icon="pi pi-eye"
-                class="p-button-text"
-                (click)="openView(g)"
-                pTooltip="Detalle"
-              ></button>
+              <button pButton type="button" icon="pi pi-users" class="p-button-text p-button-rounded p-button-help"
+                (click)="openMembers(g.id)" pTooltip="Miembros"></button>
 
-              <button
-                *ngIf="hasPermission('group:edit')"
-                pButton
-                type="button"
-                icon="pi pi-pencil"
-                class="p-button-text"
-                (click)="openEdit(g)"
-              ></button>
+              <button *ngIf="hasPermission('group:edit')" pButton type="button" icon="pi pi-pencil"
+                class="p-button-text p-button-rounded" (click)="openEdit(g)" pTooltip="Editar"></button>
 
-              <button
-                *ngIf="hasPermission('group:delete')"
-                pButton
-                type="button"
-                icon="pi pi-trash"
-                class="p-button-text p-button-danger"
-                (click)="askDelete(g)"
-              ></button>
-            </td>
-          </tr>
-        </ng-template>
-
-        <ng-template pTemplate="emptymessage">
-          <tr>
-            <td colspan="4" style="text-align: center; padding: 18px; opacity: 0.7;">
-              No hay grupos.
+              <button *ngIf="hasPermission('group:delete')" pButton type="button" icon="pi pi-trash"
+                class="p-button-text p-button-danger p-button-rounded" (click)="askDelete(g)"
+                pTooltip="Eliminar"></button>
             </td>
           </tr>
         </ng-template>
@@ -132,130 +73,23 @@
   </div>
 </p-card>
 
-<p-dialog
-  *ngIf="hasPermission('group:create') || hasPermission('group:edit')"
-  [(visible)]="dialogOpen"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: '520px', maxWidth: '94vw' }"
-  [header]="form.id ? 'Editar grupo' : 'Nuevo grupo'"
->
-  <div class="p-fluid formgrid grid">
-    <div class="field col-12">
-      <label>Nombre</label>
-      <span class="p-input-icon-left w-full auth-input">
-        <i class="pi pi-tag"></i>
-        <input
-          pInputText
-          class="w-full"
-          [(ngModel)]="form.name"
-          placeholder="Ej. Grupo Ventas"
-        />
-      </span>
+<p-dialog [(visible)]="dialogOpen" [modal]="true" [style]="{ width: '450px' }" header="Detalles del Grupo">
+  <div class="p-fluid">
+    <div class="field">
+      <label class="font-bold">Nombre</label>
+      <input pInputText [(ngModel)]="form.nombre" />
     </div>
-
-    <div class="field col-12">
-      <label>Descripción</label>
-      <span class="p-input-icon-left w-full auth-input">
-        <i class="pi pi-align-left"></i>
-        <input
-          pInputText
-          class="w-full"
-          [(ngModel)]="form.description"
-          placeholder="Opcional"
-        />
-      </span>
-    </div>
-
-    <div class="field col-12">
-      <label>Estado</label>
-      <div class="p-fluid formgrid grid">
-        <div class="col-12 md:col-6">
-          <button
-            pButton
-            type="button"
-            class="w-full"
-            [class]="form.status === 'active' ? 'p-button-success' : 'p-button-outlined'"
-            icon="pi pi-check"
-            label="Activo"
-            (click)="form.status = 'active'"
-          ></button>
-        </div>
-
-        <div class="col-12 md:col-6">
-          <button
-            pButton
-            type="button"
-            class="w-full"
-            [class]="form.status === 'inactive' ? 'p-button-secondary' : 'p-button-outlined'"
-            icon="pi pi-minus-circle"
-            label="Inactivo"
-            (click)="form.status = 'inactive'"
-          ></button>
-        </div>
-      </div>
+    <div class="field mt-3">
+      <label class="font-bold">Descripción</label>
+      <textarea pInputTextarea [(ngModel)]="form.descripcion" rows="3"></textarea>
     </div>
   </div>
-
   <ng-template pTemplate="footer">
-    <button
-      pButton
-      type="button"
-      class="p-button-text"
-      label="Cancelar"
-      (click)="dialogOpen = false"
-    ></button>
-
-    <button
-      pButton
-      type="button"
-      class="p-button-primary"
-      icon="pi pi-check"
-      label="Guardar"
-      (click)="save()"
-    ></button>
+    <button pButton label="Cancelar" class="p-button-text" (click)="dialogOpen = false"></button>
+    <button pButton label="Guardar" icon="pi pi-save" (click)="save()"></button>
   </ng-template>
 </p-dialog>
 
-<p-dialog
-  *ngIf="hasPermission('group:view')"
-  [(visible)]="viewOpen"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: '520px', maxWidth: '94vw' }"
-  header="Detalle"
->
-  <div *ngIf="selected" class="p-fluid">
-    <div class="field">
-      <label style="opacity: 0.7;">Nombre</label>
-      <div style="font-weight: 800;">{{ selected.name }}</div>
-    </div>
-
-    <div class="field" style="margin-top: 10px;">
-      <label style="opacity: 0.7;">Descripción</label>
-      <div style="font-weight: 700;">{{ selected.description || "—" }}</div>
-    </div>
-
-    <div class="field" style="margin-top: 10px;">
-      <label style="opacity: 0.7;">Estado</label>
-      <div>
-        <p-tag
-          [value]="statusLabel(selected.status)"
-          [severity]="statusSeverity(selected.status)"
-        ></p-tag>
-      </div>
-    </div>
-
-    <div class="field" style="margin-top: 10px;">
-      <label style="opacity: 0.7;">Creado</label>
-      <div style="font-weight: 700;">{{ selected.createdAt | date: "medium" }}</div>
-    </div>
-
-    <div class="field" style="margin-top: 10px;">
-      <label style="opacity: 0.7;">Actualizado</label>
-      <div style="font-weight: 700;">{{ selected.updatedAt | date: "medium" }}</div>
-    </div>
-  </div>
-</p-dialog>
+<app-group-members-modal [visible]="memberModalVisible" [groupId]="selectedGroupIdForMembers"
+  (closeModal)="memberModalVisible = false">
+</app-group-members-modal>

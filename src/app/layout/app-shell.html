@@ -1,51 +1,34 @@
-<p-splitter
-  [style]="{ minHeight: '100vh' }"
-  [panelSizes]="[22, 78]"
-  styleClass="app-shell-splitter"
->
-  <ng-template pTemplate="panel">
-    <p-panel [showHeader]="false">
-      <ng-template pTemplate="content">
-        <div class="sidebar-inner">
-          <div class="brand">
-            <div class="title">{{ projectName }}</div>
-
-            <div class="brand-meta">
-              <p-tag [value]="'API ' + apiVersion" severity="info"></p-tag>
-              <p-tag [value]="'LLM ' + llmModel" severity="success"></p-tag>
-            </div>
-          </div>
-
-          <p-divider></p-divider>
-
-          <p-menu [model]="menuItems" styleClass="shell-menu"></p-menu>
-
-          <div class="spacer"></div>
-
-          <button
-            pButton
-            type="button"
-            class="p-button-danger p-button-outlined"
-            label="Salir"
-            icon="pi pi-sign-out"
-            (click)="logout()"
-          ></button>
-
-          <div class="meta">
-            <small>Versión API: {{ apiVersion }}</small>
-          </div>
+<div class="flex min-h-screen">
+  <aside
+    class="w-20rem p-4 border-right-1 border-surface-border bg-surface-card flex flex-column justify-content-between">
+    <div>
+      <div class="mb-5 px-2">
+        <h2 class="text-xl font-bold m-0 text-primary">{{ projectName }}</h2>
+        <div class="flex gap-2 mt-2">
+          <p-tag [value]="apiVersion" severity="secondary"></p-tag>
+          <p-tag *ngIf="user$ | async as user" [value]="user.username" severity="success"></p-tag>
         </div>
-      </ng-template>
-    </p-panel>
-  </ng-template>
+      </div>
 
-  <ng-template pTemplate="panel">
-    <p-panel [showHeader]="false">
-      <ng-template pTemplate="content">
-        <div class="app-content">
-          <router-outlet></router-outlet>
-        </div>
-      </ng-template>
-    </p-panel>
-  </ng-template>
-</p-splitter>
+      <div class="flex flex-column gap-2">
+        <ng-container *ngIf="menuItems$ | async as items">
+          <button *ngFor="let item of items" pButton [label]="item.label || ''" [icon]="item.icon || ''"
+            [routerLink]="item.routerLink" routerLinkActive="bg-primary-reverse"
+            [routerLinkActiveOptions]="{ exact: item.routerLink === '/app/home' }"
+            class="p-button-text w-full justify-content-start">
+          </button>
+        </ng-container>
+      </div>
+    </div>
+
+    <div class="pt-4 border-top-1 border-surface-border">
+      <button pButton label="Cerrar Sesión" icon="pi pi-sign-out" class="p-button-danger p-button-outlined w-full"
+        (click)="logout()">
+      </button>
+    </div>
+  </aside>
+
+  <main class="flex-grow-1 p-4 bg-gray-900 overflow-y-auto">
+    <router-outlet></router-outlet>
+  </main>
+</div>

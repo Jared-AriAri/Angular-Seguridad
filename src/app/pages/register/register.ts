@@ -1,4 +1,4 @@
-import { Component } from "@angular/core";
+import { Component, inject } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Router, RouterLink } from "@angular/router";
@@ -11,14 +11,9 @@ import { InputMaskModule } from "primeng/inputmask";
 import { DatePickerModule } from "primeng/datepicker";
 import { PasswordModule } from "primeng/password";
 
-import type { UserItem } from "../user/user.model";
-import {
-  normalizePermissions,
-  MEMBER_DEFAULT_PERMISSIONS,
-} from "../user/user.model";
+import { AuthService } from "../../core/services/auth.service";
 
-const SPECIALS = /[!@#$%^&*()_\+\-=\[\]{};':",.<>\/\?\\|]/;
-const STORAGE_KEY = "demo_users";
+const SPECIALS = /[!@#$%^&*()_\+\-=\[\]{};':",.<>\/?\|\\]/;
 
 type RegisterErrors = {
   username?: string;
@@ -29,6 +24,7 @@ type RegisterErrors = {
   birthDate?: string;
   password?: string;
   confirmPassword?: string;
+  general?: string;
 };
 
 @Component({
@@ -49,6 +45,9 @@ type RegisterErrors = {
   templateUrl: "./register.html",
 })
 export class RegisterComponent {
+  private router = inject(Router);
+  private authService = inject(AuthService);
+
   username = "";
   email = "";
   fullName = "";
@@ -59,10 +58,9 @@ export class RegisterComponent {
   confirmPassword = "";
 
   submitted = false;
+  loading = false;
   success = "";
   errors: RegisterErrors = {};
-
-  constructor(private router: Router) { }
 
   private trim(v: string) {
     return String(v ?? "").trim();
@@ -83,7 +81,7 @@ export class RegisterComponent {
   }
 
   private toISODate(d: Date | null) {
-    if (!d) return "";
+    if (!d) return null;
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
@@ -111,25 +109,7 @@ export class RegisterComponent {
     }
   }
 
-  private loadUsers(): UserItem[] {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const users = raw ? (JSON.parse(raw) as UserItem[]) : [];
-
-      return users.map((user: any) => ({
-        ...user,
-        permissions: normalizePermissions(user),
-      }));
-    } catch {
-      return [];
-    }
-  }
-
-  private saveUsers(users: UserItem[]) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-  }
-
-  private validate(): RegisterErrors {
+  private validateSync(): RegisterErrors {
     const e: RegisterErrors = {};
 
     const username = this.trim(this.username);
@@ -147,62 +127,64 @@ export class RegisterComponent {
     else if (!this.isEmail(mail)) e.email = "Email inválido.";
 
     if (!phone) e.phone = "Teléfono requerido.";
-    else if (!this.isPhone(phone)) e.phone = "El teléfono debe tener exactamente 10 dígitos.";
+    else if (!this.isPhone(phone)) {
+      e.phone = "El teléfono debe tener exactamente 10 dígitos.";
+    }
 
     if (!this.birthDate) e.birthDate = "Fecha de nacimiento requerida.";
-    else if (!this.isAdult(this.birthDate)) e.birthDate = "Solo mayores de edad (18+).";
+    else if (!this.isAdult(this.birthDate)) {
+      e.birthDate = "Solo mayores de edad (18+).";
+    }
 
     if (!pass) e.password = "Contraseña requerida.";
     else if (pass.length < 10) e.password = "Mínimo 10 caracteres.";
-    else if (!SPECIALS.test(pass)) e.password = "Debe incluir al menos 1 símbolo especial.";
-
-    if (!this.confirmPassword) e.confirmPassword = "Confirma tu contraseña.";
-    else if (this.confirmPassword !== this.password) e.confirmPassword = "Las contraseñas no coinciden.";
-
-    const users = this.loadUsers();
-    const usernameNorm = username.toLowerCase();
-    if (users.some((x) => (x.username ?? "").toLowerCase() === usernameNorm)) {
-      e.username = "Ese usuario ya existe.";
+    else if (!SPECIALS.test(pass)) {
+      e.password = "Debe incluir al menos 1 símbolo especial.";
     }
 
-    const emailNorm = mail.toLowerCase();
-    if (emailNorm && users.some((x) => (x.email ?? "").toLowerCase() === emailNorm)) {
-      e.email = "Ese email ya está registrado.";
+    if (!this.confirmPassword) e.confirmPassword = "Confirma tu contraseña.";
+    else if (this.confirmPassword !== this.password) {
+      e.confirmPassword = "Las contraseñas no coinciden.";
     }
 
     return e;
   }
 
-  get isValid() {
-    return Object.keys(this.errors).length === 0;
-  }
+  async submit() {
+    if (this.loading) return;
 
-  submit() {
     this.submitted = true;
     this.success = "";
-    this.phone = this.normalizePhone(this.phone);
+    this.loading = true;
+    this.errors = {};
 
-    this.errors = this.validate();
-    if (!this.isValid) return;
+    const syncErrors = this.validateSync();
+    if (Object.keys(syncErrors).length > 0) {
+      this.errors = syncErrors;
+      this.loading = false;
+      return;
+    }
 
-    const users = this.loadUsers();
-
-    const newUser: UserItem = {
+    const payload = {
       username: this.trim(this.username),
-      password: this.password,
       email: this.trim(this.email).toLowerCase(),
       fullName: this.trim(this.fullName),
       address: this.trim(this.address),
       phone: this.normalizePhone(this.phone),
       birthDate: this.toISODate(this.birthDate),
-      createdAt: new Date().toISOString(),
-      permissions: [...MEMBER_DEFAULT_PERMISSIONS],
+      password: this.password
     };
 
-    users.push(newUser);
-    this.saveUsers(users);
-
-    this.success = "Registro guardado ✅ Redirigiendo a Login...";
-    setTimeout(() => this.router.navigateByUrl("/login"), 600);
+    try {
+      await this.authService.register(payload);
+      this.success = "Usuario registrado correctamente. Revisa tu correo para confirmar la cuenta.";
+      setTimeout(() => this.router.navigateByUrl("/login"), 1500);
+    } catch (error: any) {
+      this.errors.general = error?.error?.message || "No se pudo completar el registro.";
+      if (this.errors.general?.includes("username")) this.errors.username = "Este usuario ya existe.";
+      if (this.errors.general?.includes("email")) this.errors.email = "Este email ya está registrado.";
+    } finally {
+      this.loading = false;
+    }
   }
 }

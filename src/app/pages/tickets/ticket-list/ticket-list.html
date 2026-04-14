@@ -1,0 +1,90 @@
+<p-table #dt [value]="tickets" responsiveLayout="scroll" styleClass="ticket-table auth-card--premium" [paginator]="true"
+  [rows]="10" [globalFilterFields]="['titulo', 'usuarios.nombre_completo', 'estados.nombre', 'prioridades.nombre']"
+  selectionMode="single" (onRowSelect)="onRowSelect($event)">
+
+  <ng-template pTemplate="header">
+    <tr>
+      <th pSortableColumn="titulo">Título <p-sortIcon field="titulo"></p-sortIcon></th>
+      <th pSortableColumn="estados.nombre" style="width: 150px;">Estado <p-sortIcon field="estados.nombre"></p-sortIcon>
+      </th>
+      <th pSortableColumn="prioridades.nombre" style="width: 150px;">Prioridad <p-sortIcon
+          field="prioridades.nombre"></p-sortIcon></th>
+      <th pSortableColumn="usuarios.nombre_completo">Asignado <p-sortIcon field="usuarios.nombre_completo"></p-sortIcon>
+      </th>
+      <th pSortableColumn="creado_en" style="width: 120px;">Creación <p-sortIcon field="creado_en"></p-sortIcon></th>
+      <th pSortableColumn="fecha_final" style="width: 120px;">Límite <p-sortIcon field="fecha_final"></p-sortIcon></th>
+    </tr>
+    <tr>
+      <th>
+        <p-columnFilter type="text" field="titulo" matchMode="contains" [showMenu]="false"
+          placeholder="Filtrar título"></p-columnFilter>
+      </th>
+      <th>
+        <p-columnFilter field="estados.nombre" matchMode="equals" [showMenu]="false">
+          <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+            <p-select [ngModel]="value" [options]="statusOptions" optionLabel="label" optionValue="value"
+              (onChange)="filter($event.value)" appendTo="body" placeholder="Estado"
+              [style]="{'width':'100%'}"></p-select>
+          </ng-template>
+        </p-columnFilter>
+      </th>
+      <th>
+        <p-columnFilter type="text" field="prioridades.nombre" matchMode="contains" [showMenu]="false"
+          placeholder="Filtrar prioridad"></p-columnFilter>
+      </th>
+      <th>
+        <p-columnFilter type="text" field="usuarios.nombre_completo" matchMode="contains" [showMenu]="false"
+          placeholder="Filtrar asignado"></p-columnFilter>
+      </th>
+      <th></th>
+      <th></th>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="body" let-ticket>
+    <tr [pSelectableRow]="ticket" style="cursor: pointer;">
+      <td>
+        <div class="font-bold text-white">{{ ticket.titulo }}</div>
+        <div class="text-xs opacity-40">#{{ ticket.id.substring(0,8) }}</div>
+      </td>
+      <td>
+        <p-tag [value]="ticket.estados?.nombre || 'Pendiente'"
+          [severity]="getStatusSeverity(ticket.estados?.nombre)"></p-tag>
+      </td>
+      <td>
+        <p-tag [value]="ticket.prioridades?.nombre || 'Media'"
+          [severity]="getPrioritySeverity(ticket.prioridades?.nombre)" [rounded]="true"></p-tag>
+      </td>
+      <td>
+        <div class="flex align-items-center gap-2">
+          <div *ngIf="ticket.usuarios?.nombre_completo" class="flex align-items-center gap-2">
+            <i class="pi pi-user text-xs opacity-50"></i>
+            <span class="text-sm">{{ ticket.usuarios.nombre_completo }}</span>
+          </div>
+          <span *ngIf="!ticket.usuarios?.nombre_completo" class="text-xs italic opacity-40 text-gray-400">Sin
+            asignar</span>
+        </div>
+      </td>
+      <td>
+        <span class="text-sm opacity-70">{{ ticket.creado_en | date:'shortDate' }}</span>
+      </td>
+      <td>
+        <span [class.text-red-500]="isExpired(ticket.fecha_final) && ticket.estados?.nombre !== 'Finalizado'"
+          class="text-sm font-medium">
+          {{ (ticket.fecha_final | date:'shortDate') || 'S/F' }}
+        </span>
+      </td>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="emptymessage">
+    <tr>
+      <td colspan="6" class="text-center p-5">
+        <div class="flex flex-column align-items-center gap-2 opacity-50">
+          <i class="pi pi-folder-open text-4xl"></i>
+          <span>No se encontraron tickets en este grupo.</span>
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+</p-table>

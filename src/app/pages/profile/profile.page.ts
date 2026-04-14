@@ -1,14 +1,19 @@
-import { Component, OnInit } from "@angular/core";
-import { CommonModule } from "@angular/common";
+import { Component, OnInit, inject, ChangeDetectorRef } from "@angular/core";
+import { CommonModule, registerLocaleData } from "@angular/common";
 import { RouterModule } from "@angular/router";
 import { CardModule } from "primeng/card";
-import { AuthContextService } from "../../shared/auth-context.service";
-import { TicketService } from "../group/ticket.service";
-import type { Ticket } from "../group/ticket.model";
-import { TicketListComponent } from "../group/components/ticket-list/ticket-list";
 import { TagModule } from "primeng/tag";
 import { ButtonModule } from "primeng/button";
-import type { UserItem } from "../user/user.model";
+import { ToastModule } from "primeng/toast";
+import { MessageService } from "primeng/api";
+import { AuthService } from "../../core/services/auth.service";
+import { TicketService } from "../../core/services/ticket.service";
+import { TicketListComponent } from "../tickets/ticket-list/ticket-list";
+import type { Ticket } from "../../core/models/ticket.model";
+import { filter, take } from "rxjs";
+import localeEs from '@angular/common/locales/es';
+
+registerLocaleData(localeEs);
 
 @Component({
   selector: "app-profile-page",
@@ -20,24 +25,66 @@ import type { UserItem } from "../user/user.model";
     TicketListComponent,
     TagModule,
     ButtonModule,
+    ToastModule
   ],
+  providers: [MessageService],
   templateUrl: "./profile.page.html",
 })
 export class ProfilePage implements OnInit {
-  user: UserItem | null = null;
-  tickets: Ticket[] = [];
+  private authService = inject(AuthService);
+  private ticketService = inject(TicketService);
+  private cdr = inject(ChangeDetectorRef);
 
-  constructor(
-    private authContext: AuthContextService,
-    private ticketService: TicketService
-  ) { }
+  user: any = null;
+  tickets: Ticket[] = [];
+  loading = true;
 
   ngOnInit() {
-    this.user = this.authContext.getCurrentUser();
-    if (!this.user) return;
+    this.authService.initialized$.pipe(
+      filter(init => init === true),
+      take(1)
+    ).subscribe(async () => {
+      const currentUser = this.authService.getCurrentUser();
+      if (currentUser) {
+        const u = currentUser as any;
 
-    const allTickets = this.ticketService.getAll();
-    this.tickets = this.filterTicketsForCurrentUser(allTickets);
+        this.user = {
+          ...u,
+          fullName: u.fullName || u.nombre_completo,
+          phone: u.phone || u.telefono,
+          address: u.address || u.direccion,
+          birthDate: u.birthDate || u.fecha_nacimiento,
+          createdAt: this.formatSafeDate(u.creado_en || u.createdAt || u.created_at),
+          permissions: u.permissions || u.permisos_globales || []
+        };
+
+        await this.loadMyTickets();
+      }
+      this.loading = false;
+      this.cdr.detectChanges();
+    });
+  }
+
+  private formatSafeDate(value: any): Date | null {
+    if (!value) return null;
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  async loadMyTickets() {
+    try {
+      const res: any = await this.ticketService.getAll();
+      const allTickets = res?.data || res || [];
+      const currentUserId = this.user?.id;
+
+      if (currentUserId) {
+        this.tickets = allTickets.filter((t: any) =>
+          t.autor_id === currentUserId || t.asignado_id === currentUserId
+        );
+      }
+    } catch (error) {
+      this.tickets = [];
+    }
   }
 
   get totalTickets() {
@@ -45,52 +92,20 @@ export class ProfilePage implements OnInit {
   }
 
   get openTickets() {
-    return this.tickets.filter(
-      (t) =>
-        t.status !== "finalizado" &&
-        t.status !== "completed"
-    ).length;
-  }
-
-  get doneTickets() {
-    return this.tickets.filter(
-      (t) =>
-        t.status === "finalizado" ||
-        t.status === "completed"
-    ).length;
+    return this.tickets.filter(t => {
+      const s = t.estados?.nombre?.toLowerCase();
+      return s !== "finalizado" && s !== "completado";
+    }).length;
   }
 
   get permissionLevelLabel() {
-    if (!this.user) return "Sin acceso";
+    const perms = this.user?.permissions || [];
+    const count = perms.length;
 
-    const count = this.user.permissions.length;
-
-    if (count === 0) return "Sin acceso";
-    if (count > 14) return "Acceso alto";
-    if (count > 6) return "Acceso medio";
-    return "Acceso básico";
-  }
-
-  private filterTicketsForCurrentUser(tickets: Ticket[]) {
-    if (!this.user) return [];
-
-    const username = this.normalize(this.user.username);
-
-    return tickets.filter((ticket) => {
-      const assignedTo = this.normalize(ticket.assignedTo);
-      const createdBy = this.normalize((ticket as any).createdBy);
-      const usernameField = this.normalize((ticket as any).username);
-
-      return (
-        assignedTo === username ||
-        createdBy === username ||
-        usernameField === username
-      );
-    });
-  }
-
-  private normalize(value: unknown) {
-    return String(value ?? "").trim().toLowerCase();
+    if (count >= 15) return "Acceso Total";
+    if (count > 8) return "Acceso Medio";
+    if (count > 0) return "Acceso Básico";
+    return "Sin Permisos";
   }
 
   close() {

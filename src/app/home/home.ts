@@ -1,39 +1,28 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, inject, ChangeDetectorRef } from "@angular/core";
 import { CommonModule } from "@angular/common";
-import { RouterModule } from "@angular/router";
+import { RouterModule, Router } from "@angular/router";
+import { FormsModule } from "@angular/forms";
+
 import { CardModule } from "primeng/card";
 import { TagModule } from "primeng/tag";
 import { ButtonModule } from "primeng/button";
 import { ChartModule } from "primeng/chart";
-import { GroupService } from "../pages/group/group.service";
-import { TicketService } from "../pages/group/ticket.service";
-import { AuthContextService } from "../shared/auth-context.service";
-import type { Group } from "../pages/group/group.model";
-import type { Ticket } from "../pages/group/ticket.model";
-import type { Permission } from "../pages/user/user.model";
+import { TableModule } from "primeng/table";
+import { SelectModule } from "primeng/select";
+import { DividerModule } from "primeng/divider";
+import { TooltipModule } from "primeng/tooltip";
 
-type StoredUser = {
-  username: string;
-  password: string;
-  email: string;
-  fullName: string;
-  address: string;
-  phone: string;
-  birthDate: string;
-  createdAt: string;
-  permissions: Permission[];
-};
+import { GroupService } from "../core/services/group.service";
+import { TicketService } from "../core/services/ticket.service";
+import { AuthService } from "../core/services/auth.service";
+import { CreateTicketModalComponent } from "../pages/tickets/components/create-ticket-modal/create-ticket-modal";
+import { TicketDetailModalComponent } from "../pages/tickets/components/ticket-detail-modal/ticket-detail-modal";
+
+import type { Group } from "../core/models/group.model";
+import type { Ticket } from "../core/models/ticket.model";
+import { filter, take, firstValueFrom } from "rxjs";
 
 type QuickFilter = "all" | "mine" | "unassigned" | "high";
-
-type GroupMember = {
-  username: string;
-  fullName: string;
-  email: string;
-};
-
-const USERS_STORAGE_KEY = "demo_users";
-const GROUP_MEMBERS_STORAGE_KEY = "group_members";
 
 @Component({
   selector: "app-home",
@@ -41,400 +30,210 @@ const GROUP_MEMBERS_STORAGE_KEY = "group_members";
   imports: [
     CommonModule,
     RouterModule,
+    FormsModule,
     CardModule,
     TagModule,
     ButtonModule,
     ChartModule,
+    TableModule,
+    SelectModule,
+    DividerModule,
+    TooltipModule,
+    CreateTicketModalComponent,
+    TicketDetailModalComponent
   ],
-  templateUrl: "./home.html",
+  templateUrl: "./home.html"
 })
 export class HomePage implements OnInit {
-  version = "v1";
+  private groupService = inject(GroupService);
+  private ticketService = inject(TicketService);
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
+
+  version = "v1.6";
   llmModel = "No configurado";
-
   groups: Group[] = [];
+  selectedGroup: Group | null = null;
   tickets: Ticket[] = [];
-  users: StoredUser[] = [];
   filteredRecentTickets: Ticket[] = [];
-
   activeQuickFilter: QuickFilter = "all";
+  loading = true;
+  showCreateModal = false;
+  showDetailModal = false;
+  selectedTicket: Ticket | null = null;
+  clickCount = 0;
+  private currentUser: any = null;
 
-  stats = {
-    total: 0,
-    pendientes: 0,
-    enProgreso: 0,
-    revision: 0,
-    finalizados: 0,
-    bloqueados: 0,
-  };
-
+  stats = { total: 0, pendientes: 0, enProgreso: 0, revision: 0, finalizados: 0, bloqueados: 0 };
   chartData: any;
   chartOptions: any;
 
-  quickActions: { label: string; route: string }[] = [];
-
-  constructor(
-    private groupService: GroupService,
-    private ticketService: TicketService,
-    private authContext: AuthContextService
-  ) { }
-
   ngOnInit() {
-    this.groupService.seedIfEmpty();
-    this.ticketService.seedIfEmpty();
+    this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+    });
 
-    this.llmModel = this.resolveLlmModel();
-    this.loadUsers();
-    this.quickActions = this.buildQuickActions();
-
-    this.groupService.groups$.subscribe((groups) => {
-      this.groups = this.filterGroupsForCurrentUser(groups ?? []);
-      this.loadTickets();
+    this.authService.initialized$.pipe(
+      filter(init => init === true),
+      take(1)
+    ).subscribe(() => {
+      setTimeout(async () => {
+        this.llmModel = localStorage.getItem("llmModel") || "No configurado";
+        if (this.hasPermission("group:view")) {
+          await this.loadGroups();
+        }
+        this.loading = false;
+        this.cdr.detectChanges();
+      });
     });
   }
 
-  hasPermission(permission: Permission) {
-    return this.authContext.hasPermission(permission);
-  }
-
-  loadUsers() {
+  async loadGroups() {
     try {
-      const raw = localStorage.getItem(USERS_STORAGE_KEY);
-      this.users = raw ? (JSON.parse(raw) as StoredUser[]) : [];
-    } catch {
-      this.users = [];
+      const user = await firstValueFrom(this.authService.currentUser$);
+      if (!user) return;
+
+      const res: any = await this.groupService.getMyGroups(user.id);
+      this.groups = res?.data || res || [];
+
+      if (this.groups.length > 0) {
+        this.selectedGroup = this.groups[0];
+        await this.loadTickets();
+      }
+    } catch (e) {
+      this.groups = [];
     }
   }
 
-  loadTickets() {
-    const visibleGroupIds = new Set(this.groups.map((group) => group.id));
-    const currentUsername = (this.getCurrentUsername() || "").trim().toLowerCase();
+  async onGroupChange() {
+    if (this.selectedGroup) {
+      await this.loadTickets();
+    }
+  }
 
-    const groupScopedTickets = (this.ticketService.getAll() ?? []).filter((ticket) =>
-      visibleGroupIds.has(ticket.groupId)
-    );
+  async loadTickets() {
+    if (!this.selectedGroup) return;
+    try {
+      this.tickets = await this.ticketService.getByGroup(this.selectedGroup.id);
+      this.updateStats();
+    } catch (e) {
+      this.tickets = [];
+      this.updateStats();
+    }
+  }
 
-    this.tickets = groupScopedTickets.filter(
-      (ticket) =>
-        (ticket.assignedTo || "").trim().toLowerCase() === currentUsername
-    );
-
+  private updateStats() {
     this.stats = {
       total: this.tickets.length,
-      pendientes: this.tickets.filter(
-        (t) => t.status === "pendiente" || t.status === "pending"
-      ).length,
-      enProgreso: this.tickets.filter(
-        (t) => t.status === "en_progreso" || t.status === "in_progress"
-      ).length,
-      revision: this.tickets.filter(
-        (t) => t.status === "revision" || t.status === "review"
-      ).length,
-      finalizados: this.tickets.filter(
-        (t) => t.status === "finalizado" || t.status === "completed"
-      ).length,
-      bloqueados: this.tickets.filter(
-        (t) => t.status === "bloqueado" || t.status === "blocked"
-      ).length,
+      pendientes: this.countByStatus("pendiente"),
+      enProgreso: this.countByStatus("en progreso"),
+      revision: this.countByStatus("revision"),
+      finalizados: this.countByStatus("finalizado"),
+      bloqueados: this.countByStatus("bloqueado"),
     };
-
     this.applyQuickFilter(this.activeQuickFilter);
     this.buildChart();
+    this.cdr.detectChanges();
   }
 
-  applyQuickFilter(filter: QuickFilter) {
-    this.activeQuickFilter = filter;
+  goToKanban() {
+    if (this.selectedGroup) {
+      this.router.navigate(['/app/group', this.selectedGroup.id]);
+    }
+  }
 
-    const currentUsername = (this.getCurrentUsername() || "").trim().toLowerCase();
+  viewTicket(ticket: Ticket) {
+    this.selectedTicket = ticket;
+    this.showDetailModal = true;
+  }
+
+  onDetailClose() {
+    this.showDetailModal = false;
+    this.selectedTicket = null;
+    this.loadTickets();
+  }
+
+  openCreateTicket() {
+    this.showCreateModal = true;
+  }
+
+  hasPermission(p: string): boolean {
+    return this.authService.hasPermission(p as any);
+  }
+
+  private normalizeStr(str?: string | null) {
+    return str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+  }
+
+  private countByStatus(n: string) {
+    return this.tickets.filter(t => this.normalizeStr(t.estados?.nombre) === n).length;
+  }
+
+  async applyQuickFilter(f: QuickFilter) {
+    this.activeQuickFilter = f;
     let data = [...this.tickets];
+    const user = await firstValueFrom(this.authService.currentUser$);
 
-    if (filter === "mine") {
-      data = data.filter(
-        (t) =>
-          (t.assignedTo || "").trim().toLowerCase() === currentUsername
-      );
-    }
-
-    if (filter === "unassigned") {
-      data = data.filter((t) => !t.assignedTo || !t.assignedTo.trim());
-    }
-
-    if (filter === "high") {
-      data = data.filter(
-        (t) =>
-          t.priority === "alta" ||
-          t.priority === "highest" ||
-          t.priority === "high"
-      );
+    if (f === "mine" && user) {
+      data = data.filter(t => t.asignado_id === user.id || t.autor_id === user.id);
+    } else if (f === "high") {
+      data = data.filter(t => {
+        const p = this.normalizeStr(t.prioridades?.nombre);
+        return p === "alta" || p === "urgente";
+      });
     }
 
     this.filteredRecentTickets = data
-      .sort((a, b) => this.getTicketSortDate(b) - this.getTicketSortDate(a))
-      .slice(0, 6);
+      .sort((a, b) => new Date(b.creado_en || 0).getTime() - new Date(a.creado_en || 0).getTime())
+      .slice(0, 5);
   }
 
-  getTicketsByGroup(groupId: string) {
-    return this.tickets.filter((t) => t.groupId === groupId).length;
+  getTicketStatusLabel(t: Ticket) {
+    return t.estados?.nombre || "Sin estado";
   }
 
-  getGroupRoute(groupId: string) {
-    return ["/app/group", groupId];
+  getTicketStatusSeverity(t: Ticket): any {
+    const s = this.normalizeStr(t.estados?.nombre);
+    const map: Record<string, string> = {
+      'pendiente': 'warn',
+      'en progreso': 'info',
+      'revision': 'contrast',
+      'finalizado': 'success',
+      'bloqueado': 'danger'
+    };
+    return map[s] || 'secondary';
   }
 
-  getStatusLabel(status: Group["status"]) {
-    return status === "active" ? "Activo" : "Inactivo";
-  }
-
-  getTicketStatusLabel(status: string | null | undefined) {
-    switch (status) {
-      case "pendiente":
-      case "pending":
-        return "Pendiente";
-
-      case "en_progreso":
-      case "in_progress":
-        return "En progreso";
-
-      case "revision":
-      case "review":
-        return "Revisión";
-
-      case "finalizado":
-      case "completed":
-        return "Finalizado";
-
-      case "bloqueado":
-      case "blocked":
-        return "Bloqueado";
-
-      default:
-        return status || "Sin estado";
-    }
-  }
-
-  getTicketStatusSeverity(
-    status: string | null | undefined
-  ): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" {
-    switch (status) {
-      case "pendiente":
-      case "pending":
-        return "warn";
-
-      case "en_progreso":
-      case "in_progress":
-        return "info";
-
-      case "revision":
-      case "review":
-        return "contrast";
-
-      case "finalizado":
-      case "completed":
-        return "success";
-
-      case "bloqueado":
-      case "blocked":
-        return "danger";
-
-      default:
-        return "secondary";
-    }
-  }
-
-  getPriorityLabel(ticket: Ticket) {
-    switch (ticket.priority) {
-      case "alta":
-      case "highest":
-      case "high":
-        return "Alta";
-
-      case "media":
-      case "medium_high":
-      case "medium":
-      case "medium_low":
-        return "Media";
-
-      case "baja":
-      case "low":
-      case "lowest":
-        return "Baja";
-
-      default:
-        return "Sin prioridad";
-    }
-  }
-
-  getAssignedToLabel(ticket: Ticket) {
-    if (!ticket.assignedTo || !ticket.assignedTo.trim()) {
-      return "Sin asignar";
-    }
-
-    const assigned = ticket.assignedTo.trim().toLowerCase();
-
-    const userByUsername = this.users.find(
-      (u) => u.username.trim().toLowerCase() === assigned
-    );
-
-    if (userByUsername) {
-      return userByUsername.fullName?.trim() || userByUsername.username;
-    }
-
-    const userByEmail = this.users.find(
-      (u) => u.email.trim().toLowerCase() === assigned
-    );
-
-    if (userByEmail) {
-      return userByEmail.fullName?.trim() || userByEmail.username;
-    }
-
-    return ticket.assignedTo;
-  }
-
-  getDueDateLabel(ticket: Ticket) {
-    if (!ticket.dueDate) return "Sin fecha";
-
-    const parsed = new Date(ticket.dueDate);
-    if (Number.isNaN(parsed.getTime())) return String(ticket.dueDate);
-
-    return parsed.toLocaleDateString("es-MX");
-  }
-
-  private buildQuickActions() {
-    const actions: { label: string; route: string; permission: Permission }[] = [
-      { label: "Ir a grupos", route: "/app/group", permission: "group:view" },
-      { label: "Usuarios", route: "/app/user", permission: "user:view" },
-    ];
-
-    return actions
-      .filter((action) => this.authContext.hasPermission(action.permission))
-      .map(({ label, route }) => ({ label, route }));
+  getPriorityLabel(t: Ticket) {
+    return t.prioridades?.nombre || "N/A";
   }
 
   private buildChart() {
     this.chartData = {
-      labels: ["Pendientes", "En progreso", "Revisión", "Finalizados", "Bloqueados"],
-      datasets: [
-        {
-          label: "Tickets",
-          data: [
-            this.stats.pendientes,
-            this.stats.enProgreso,
-            this.stats.revision,
-            this.stats.finalizados,
-            this.stats.bloqueados,
-          ],
-          backgroundColor: [
-            "rgba(249, 115, 22, 0.85)",
-            "rgba(56, 189, 248, 0.85)",
-            "rgba(226, 232, 240, 0.85)",
-            "rgba(74, 222, 128, 0.85)",
-            "rgba(239, 68, 68, 0.85)",
-          ],
-          borderRadius: 10,
-          maxBarThickness: 42,
-        },
-      ],
+      labels: ["Pendientes", "En Progreso", "Revisión", "Finalizados"],
+      datasets: [{
+        data: [this.stats.pendientes, this.stats.enProgreso, this.stats.revision, this.stats.finalizados],
+        backgroundColor: ["#F97316", "#3B82F6", "#64748B", "#22C55E"]
+      }]
     };
-
     this.chartOptions = {
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: { display: false }
       },
       scales: {
-        x: {
-          ticks: { color: "#cbd5e1" },
-          grid: { display: false },
-        },
-        y: {
-          beginAtZero: true,
-          ticks: { color: "#94a3b8", precision: 0 },
-          grid: { color: "rgba(148, 163, 184, 0.12)" },
-        },
-      },
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+        x: { grid: { display: false } }
+      }
     };
   }
 
-  private getTicketSortDate(ticket: Ticket): number {
-    const possibleDates = [ticket.createdAt, ticket.dueDate];
-
-    for (const value of possibleDates) {
-      if (!value) continue;
-      const parsed = new Date(value).getTime();
-      if (!Number.isNaN(parsed)) return parsed;
+  logoClicked() {
+    this.clickCount++;
+    if (this.clickCount === 5) {
+      this.clickCount = 0;
+      alert("catch u");
     }
-
-    return 0;
-  }
-
-  private getCurrentUsername(): string | null {
-    return this.authContext.getCurrentUsername();
-  }
-
-  private filterGroupsForCurrentUser(groups: Group[]) {
-    const currentUser = this.authContext.getCurrentUser();
-    if (!currentUser) return [];
-
-    if (this.authContext.hasPermission("group:members")) {
-      return groups;
-    }
-
-    const membershipMap = this.loadGroupMembers();
-
-    return groups.filter((group) => {
-      const members = membershipMap[group.id] || [];
-
-      return members.some(
-        (member) =>
-          (member.username || "").trim().toLowerCase() ===
-          currentUser.username.trim().toLowerCase()
-      );
-    });
-  }
-
-  private loadGroupMembers(): Record<string, GroupMember[]> {
-    try {
-      const raw = localStorage.getItem(GROUP_MEMBERS_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  }
-
-  private resolveLlmModel(): string {
-    const directKeys = [
-      "llmModel",
-      "selectedLLM",
-      "selectedLlm",
-      "model",
-      "aiModel",
-    ];
-
-    for (const key of directKeys) {
-      const value = localStorage.getItem(key);
-      if (value && value.trim()) return value;
-    }
-
-    const jsonKeys = ["settings", "appSettings", "preferences"];
-
-    for (const key of jsonKeys) {
-      const raw = localStorage.getItem(key);
-      if (!raw) continue;
-
-      try {
-        const parsed = JSON.parse(raw);
-
-        const value =
-          parsed?.llmModel ||
-          parsed?.selectedLLM ||
-          parsed?.selectedLlm ||
-          parsed?.model ||
-          parsed?.aiModel;
-
-        if (value && String(value).trim()) return String(value);
-      } catch { }
-    }
-
-    return "No configurado";
   }
 }

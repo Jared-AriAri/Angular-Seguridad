@@ -1,105 +1,127 @@
-<p-card class="home-dashboard-card profile-page-card">
-  <ng-template pTemplate="header">
-    <div class="dashboard-hero">
-      <div class="dashboard-hero__left">
-        <div class="dashboard-hero__meta">
-          <div class="llm-badge">
-            <span class="llm-badge__label">Perfil</span>
-            <strong class="llm-badge__value">Mi cuenta</strong>
-          </div>
-        </div>
-
+<div class="p-4">
+  <p-card styleClass="auth-card auth-card--premium" [style]="{ width: '100%', maxWidth: '900px', margin: '0 auto' }">
+    <ng-template pTemplate="header">
+      <div class="auth-head flex justify-content-between align-items-center p-4">
         <div>
-          <div class="group-page-title">Mi perfil</div>
-          <div class="group-page-subtitle">
-            Información personal y permisos asignados
+          <div class="auth-title">Mi Perfil</div>
+          <div class="auth-subtitle text-sm opacity-70">Información personal y resumen de actividad en el sistema</div>
+        </div>
+        <button pButton type="button" icon="pi pi-arrow-left" label="Volver" class="p-button-text p-button-secondary"
+          (click)="close()"></button>
+      </div>
+    </ng-template>
+
+    <div class="auth-body p-4" *ngIf="!loading && user">
+      <div
+        class="flex flex-column md:flex-row align-items-start md:align-items-center gap-4 mb-5 pb-4 border-bottom-1 border-gray-800">
+        <div class="bg-primary-900 border-round-circle flex align-items-center justify-content-center"
+          style="width: 80px; height: 80px">
+          <i class="pi pi-user text-4xl text-primary-200"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="text-3xl font-bold text-white">{{ user.fullName }}</div>
+          <div class="text-primary-400 font-medium">@{{ user.username }}</div>
+        </div>
+        <div class="flex flex-column align-items-end">
+          <p-tag [value]="permissionLevelLabel" severity="info" styleClass="text-lg px-3 py-1"></p-tag>
+          <div class="text-xs mt-1 opacity-50">Nivel de Acceso</div>
+        </div>
+      </div>
+
+      <div class="grid formgrid p-fluid">
+        <div class="field col-12 md:col-6 mb-4">
+          <label class="block font-semibold mb-2 text-gray-400 text-sm uppercase tracking-wider">Correo
+            electrónico</label>
+          <div class="p-3 bg-gray-900 border-round border-1 border-gray-800 flex align-items-center gap-3">
+            <i class="pi pi-envelope text-primary-400"></i>
+            <span class="text-white">{{ user.email }}</span>
+          </div>
+        </div>
+
+        <div class="field col-12 md:col-6 mb-4">
+          <label class="block font-semibold mb-2 text-gray-400 text-sm uppercase tracking-wider">Teléfono</label>
+          <div class="p-3 bg-gray-900 border-round border-1 border-gray-800 flex align-items-center gap-3">
+            <i class="pi pi-phone text-primary-400"></i>
+            <span class="text-white">{{ user.phone || 'Sin registrar' }}</span>
+          </div>
+        </div>
+
+        <div class="field col-12 md:col-6 mb-4">
+          <label class="block font-semibold mb-2 text-gray-400 text-sm uppercase tracking-wider">Fecha de
+            Nacimiento</label>
+          <div class="p-3 bg-gray-900 border-round border-1 border-gray-800 flex align-items-center gap-3">
+            <i class="pi pi-calendar text-primary-400"></i>
+            <span class="text-white">{{ user.birthDate || 'N/A' }}</span>
+          </div>
+        </div>
+
+        <div class="field col-12 md:col-6 mb-4">
+          <label class="block font-semibold mb-2 text-gray-400 text-sm uppercase tracking-wider">Dirección</label>
+          <div class="p-3 bg-gray-900 border-round border-1 border-gray-800 flex align-items-center gap-3">
+            <i class="pi pi-map-marker text-primary-400"></i>
+            <span class="text-white">{{ user.address || 'N/A' }}</span>
+          </div>
+        </div>
+
+        <div class="field col-12 mb-4">
+          <label class="block font-semibold mb-2 text-gray-400 text-sm uppercase tracking-wider">Miembro desde
+            el</label>
+          <div class="p-3 bg-gray-900 border-round border-1 border-gray-800">
+            <span class="text-white" *ngIf="user.createdAt">
+              {{ user.createdAt | date: "EEEE, d 'de' MMMM 'de' y" }}
+            </span>
+            <span class="text-gray-500 italic" *ngIf="!user.createdAt">Fecha no disponible</span>
           </div>
         </div>
       </div>
 
-      <div class="dashboard-hero__right">
-        <p-button label="Volver" icon="pi pi-arrow-left" severity="secondary" (onClick)="close()"></p-button>
+      <div class="mt-4 mb-6">
+        <div class="text-lg font-bold mb-3 flex align-items-center gap-2 text-white">
+          <i class="pi pi-shield text-primary-400"></i>
+          Permisos del Sistema
+          <span class="text-sm font-normal opacity-50">({{ user.permissions?.length || 0 }} activos)</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <p-tag *ngFor="let perm of user.permissions" [value]="perm" severity="secondary" styleClass="text-xs"></p-tag>
+        </div>
       </div>
-    </div>
-  </ng-template>
 
-  <ng-container *ngIf="user">
-    <div class="home-dashboard">
-      <div class="dashboard-main-grid">
-        <div class="dashboard-left-column">
-          <p-card class="dashboard-section-card current-user-card">
-            <div class="current-user-head">
-              <div>
-                <div class="current-user-name">
-                  {{ user.fullName || user.username }}
-                </div>
-                <div class="current-user-line">@{{ user.username }}</div>
-              </div>
-
-              <p-tag [value]="permissionLevelLabel" severity="contrast"></p-tag>
+      <div class="mt-6">
+        <div class="flex justify-content-between align-items-end mb-4">
+          <div>
+            <div class="text-lg font-bold text-white">Mi Actividad</div>
+            <div class="text-sm opacity-50">Resumen de tickets vinculados a mi cuenta</div>
+          </div>
+          <div class="flex gap-4">
+            <div class="text-center">
+              <div class="text-2xl font-bold text-primary-400">{{ totalTickets }}</div>
+              <div class="text-xs uppercase opacity-50">Total</div>
             </div>
-
-            <div class="ticket-detail-grid">
-              <div class="dashboard-group-item">
-                <div>
-                  <div class="dashboard-group-name">Usuario</div>
-                  <div class="dashboard-group-meta">{{ user.username }}</div>
-                </div>
-              </div>
-
-              <div class="dashboard-group-item">
-                <div>
-                  <div class="dashboard-group-name">Correo electrónico</div>
-                  <div class="dashboard-group-meta">{{ user.email || "—" }}</div>
-                </div>
-              </div>
-
-              <div class="dashboard-group-item">
-                <div>
-                  <div class="dashboard-group-name">Teléfono</div>
-                  <div class="dashboard-group-meta">{{ user.phone || "—" }}</div>
-                </div>
-              </div>
-
-              <div class="dashboard-group-item">
-                <div>
-                  <div class="dashboard-group-name">Nacimiento</div>
-                  <div class="dashboard-group-meta">{{ user.birthDate || "—" }}</div>
-                </div>
-              </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-orange-400">{{ openTickets }}</div>
+              <div class="text-xs uppercase opacity-50">Abiertos</div>
             </div>
-
-            <div class="dashboard-version-box">
-              <div class="dashboard-group-name">Dirección</div>
-              <div class="dashboard-group-meta">{{ user.address || "—" }}</div>
-            </div>
-
-            <div class="dashboard-version-box">
-              <div class="dashboard-group-name">Cuenta creada</div>
-              <div class="dashboard-group-meta">
-                {{ user.createdAt | date: "medium" }}
-              </div>
-            </div>
-          </p-card>
+          </div>
         </div>
 
-        <div class="dashboard-right-column">
-          <p-card class="dashboard-section-card">
-            <div class="dashboard-section-head">
-              <div>
-                <div class="dashboard-section-title">Permisos</div>
-                <div class="dashboard-section-subtitle">
-                  {{ user.permissions.length || 0 }} permisos asignados
-                </div>
-              </div>
-            </div>
-
-            <div class="ticket-detail-meta">
-              <p-tag *ngFor="let permission of user.permissions" [value]="permission" severity="info"></p-tag>
-            </div>
-          </p-card>
+        <div class="border-round border-1 border-gray-800 overflow-hidden shadow-4 bg-gray-900">
+          <app-ticket-list [tickets]="tickets"></app-ticket-list>
         </div>
       </div>
     </div>
-  </ng-container>
-</p-card>
+
+    <div class="p-4" *ngIf="loading || !user">
+      <div class="flex align-items-center gap-3 mb-4">
+        <div class="bg-gray-800 border-round" style="width: 80px; height: 80px"></div>
+        <div class="flex-grow-1">
+          <div class="bg-gray-800 border-round mb-2" style="width: 250px; height: 30px"></div>
+          <div class="bg-gray-800 border-round" style="width: 150px; height: 20px"></div>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="col-6 bg-gray-900 border-round mb-4" style="height: 60px"></div>
+        <div class="col-6 bg-gray-900 border-round mb-4" style="height: 60px"></div>
+      </div>
+    </div>
+  </p-card>
+</div>

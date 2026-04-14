@@ -12,4 +12,4 @@ import { CommonModule } from '@angular/common';
   templateUrl: './auth-layout.html',
   styleUrls: ['./auth-layout.css']
 })
-export class AuthLayoutComponent {}
+export class AuthLayoutComponent { }
