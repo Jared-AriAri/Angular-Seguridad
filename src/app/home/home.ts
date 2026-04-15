@@ -2,7 +2,6 @@ import { Component, OnInit, inject, ChangeDetectorRef } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { RouterModule, Router } from "@angular/router";
 import { FormsModule } from "@angular/forms";
-
 import { CardModule } from "primeng/card";
 import { TagModule } from "primeng/tag";
 import { ButtonModule } from "primeng/button";
@@ -11,13 +10,11 @@ import { TableModule } from "primeng/table";
 import { SelectModule } from "primeng/select";
 import { DividerModule } from "primeng/divider";
 import { TooltipModule } from "primeng/tooltip";
-
 import { GroupService } from "../core/services/group.service";
 import { TicketService } from "../core/services/ticket.service";
 import { AuthService } from "../core/services/auth.service";
 import { CreateTicketModalComponent } from "../pages/tickets/components/create-ticket-modal/create-ticket-modal";
 import { TicketDetailModalComponent } from "../pages/tickets/components/ticket-detail-modal/ticket-detail-modal";
-
 import type { Group } from "../core/models/group.model";
 import type { Ticket } from "../core/models/ticket.model";
 import { filter, take, firstValueFrom } from "rxjs";
@@ -28,19 +25,9 @@ type QuickFilter = "all" | "mine" | "unassigned" | "high";
   selector: "app-home",
   standalone: true,
   imports: [
-    CommonModule,
-    RouterModule,
-    FormsModule,
-    CardModule,
-    TagModule,
-    ButtonModule,
-    ChartModule,
-    TableModule,
-    SelectModule,
-    DividerModule,
-    TooltipModule,
-    CreateTicketModalComponent,
-    TicketDetailModalComponent
+    CommonModule, RouterModule, FormsModule, CardModule, TagModule, ButtonModule,
+    ChartModule, TableModule, SelectModule, DividerModule, TooltipModule,
+    CreateTicketModalComponent, TicketDetailModalComponent
   ],
   templateUrl: "./home.html"
 })
@@ -70,31 +57,25 @@ export class HomePage implements OnInit {
   chartOptions: any;
 
   ngOnInit() {
-    this.authService.currentUser$.subscribe(user => {
-      this.currentUser = user;
-    });
-
     this.authService.initialized$.pipe(
       filter(init => init === true),
       take(1)
-    ).subscribe(() => {
-      setTimeout(async () => {
-        this.llmModel = localStorage.getItem("llmModel") || "No configurado";
-        if (this.hasPermission("group:view")) {
-          await this.loadGroups();
-        }
-        this.loading = false;
-        this.cdr.detectChanges();
-      });
+    ).subscribe(async () => {
+      this.llmModel = localStorage.getItem("llmModel") || "No configurado";
+      this.currentUser = await firstValueFrom(this.authService.currentUser$);
+
+      if (this.hasPermission("group:view") && this.currentUser) {
+        await this.loadGroups();
+      }
+
+      this.loading = false;
+      this.cdr.detectChanges();
     });
   }
 
   async loadGroups() {
     try {
-      const user = await firstValueFrom(this.authService.currentUser$);
-      if (!user) return;
-
-      const res: any = await this.groupService.getMyGroups(user.id);
+      const res: any = await this.groupService.getMyGroups(this.currentUser.id);
       this.groups = res?.data || res || [];
 
       if (this.groups.length > 0) {
@@ -102,6 +83,7 @@ export class HomePage implements OnInit {
         await this.loadTickets();
       }
     } catch (e) {
+      console.error("Error al cargar grupos", e);
       this.groups = [];
     }
   }
@@ -137,10 +119,27 @@ export class HomePage implements OnInit {
     this.cdr.detectChanges();
   }
 
-  goToKanban() {
-    if (this.selectedGroup) {
-      this.router.navigate(['/app/group', this.selectedGroup.id]);
+  async applyQuickFilter(f: QuickFilter) {
+    this.activeQuickFilter = f;
+    let data = [...this.tickets];
+
+    if (f === "mine" && this.currentUser) {
+      data = data.filter(t => t.asignado_id === this.currentUser.id || t.autor_id === this.currentUser.id);
+    } else if (f === "high") {
+      data = data.filter(t => {
+        const p = this.normalizeStr(t.prioridades?.nombre);
+        return p === "alta" || p === "urgente";
+      });
     }
+
+    this.filteredRecentTickets = data
+      .sort((a, b) => new Date(b.creado_en || 0).getTime() - new Date(a.creado_en || 0).getTime())
+      .slice(0, 5);
+  }
+
+  // --- MÉTODOS DE APOYO ---
+  goToKanban() {
+    if (this.selectedGroup) this.router.navigate(['/app/group', this.selectedGroup.id]);
   }
 
   viewTicket(ticket: Ticket) {
@@ -170,43 +169,15 @@ export class HomePage implements OnInit {
     return this.tickets.filter(t => this.normalizeStr(t.estados?.nombre) === n).length;
   }
 
-  async applyQuickFilter(f: QuickFilter) {
-    this.activeQuickFilter = f;
-    let data = [...this.tickets];
-    const user = await firstValueFrom(this.authService.currentUser$);
-
-    if (f === "mine" && user) {
-      data = data.filter(t => t.asignado_id === user.id || t.autor_id === user.id);
-    } else if (f === "high") {
-      data = data.filter(t => {
-        const p = this.normalizeStr(t.prioridades?.nombre);
-        return p === "alta" || p === "urgente";
-      });
-    }
-
-    this.filteredRecentTickets = data
-      .sort((a, b) => new Date(b.creado_en || 0).getTime() - new Date(a.creado_en || 0).getTime())
-      .slice(0, 5);
-  }
-
-  getTicketStatusLabel(t: Ticket) {
-    return t.estados?.nombre || "Sin estado";
-  }
+  getTicketStatusLabel(t: Ticket) { return t.estados?.nombre || "Sin estado"; }
 
   getTicketStatusSeverity(t: Ticket): any {
     const s = this.normalizeStr(t.estados?.nombre);
     const map: Record<string, string> = {
-      'pendiente': 'warn',
-      'en progreso': 'info',
-      'revision': 'contrast',
-      'finalizado': 'success',
-      'bloqueado': 'danger'
+      'pendiente': 'warn', 'en progreso': 'info', 'revision': 'contrast',
+      'finalizado': 'success', 'bloqueado': 'danger'
     };
     return map[s] || 'secondary';
-  }
-
-  getPriorityLabel(t: Ticket) {
-    return t.prioridades?.nombre || "N/A";
   }
 
   private buildChart() {
@@ -219,9 +190,7 @@ export class HomePage implements OnInit {
     };
     this.chartOptions = {
       maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
+      plugins: { legend: { display: false } },
       scales: {
         y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
         x: { grid: { display: false } }
@@ -231,9 +200,6 @@ export class HomePage implements OnInit {
 
   logoClicked() {
     this.clickCount++;
-    if (this.clickCount === 5) {
-      this.clickCount = 0;
-      alert("catch u");
-    }
+    if (this.clickCount === 5) { this.clickCount = 0; alert("catch u"); }
   }
 }

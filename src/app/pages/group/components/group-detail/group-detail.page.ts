@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from "@angular/core";
-import { CommonModule } from "@angular/common";
+import { CommonModule, Location } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterModule } from "@angular/router";
 import { filter, take } from "rxjs";
@@ -9,7 +9,8 @@ import { ButtonModule } from "primeng/button";
 import { SelectButtonModule } from "primeng/selectbutton";
 import { TagModule } from "primeng/tag";
 import { ToastModule } from "primeng/toast";
-import { MessageService } from "primeng/api";
+import { MessageService, ConfirmationService } from "primeng/api";
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { GroupService } from "../../../../core/services/group.service";
 import { TicketService } from "../../../../core/services/ticket.service";
@@ -37,23 +38,26 @@ import { GroupMembersModalComponent } from "../group-members-modal/group-members
     SelectButtonModule,
     TagModule,
     ToastModule,
+    ConfirmDialogModule,
     TicketKanbanComponent,
     TicketListComponent,
     CreateTicketModalComponent,
     TicketDetailModalComponent,
     GroupMembersModalComponent
   ],
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   templateUrl: "./group-detail.page.html"
 })
 export class GroupDetailPage implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private location = inject(Location);
   private groupService = inject(GroupService);
   private ticketService = inject(TicketService);
   private authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private messageService = inject(MessageService);
+  private confirmationService = inject(ConfirmationService);
 
   group: Group | null = null;
   tickets: Ticket[] = [];
@@ -175,13 +179,13 @@ export class GroupDetailPage implements OnInit {
 
   canEditTicket(ticket: Ticket): boolean {
     if (!ticket) return false;
-    if (this.hasPermission("ticket:edit")) return true;
     const user = this.authService.getCurrentUser();
-    return ticket.asignado_id === user?.id && this.hasPermission("ticket:comment");
+    if (this.hasPermission("ticket:edit")) return true;
+    return ticket.asignado_id === user?.id || ticket.autor_id === user?.id;
   }
 
   openCreateTicket() {
-    if (this.hasPermission("ticket:create")) {
+    if (this.hasPermission("ticket:add") || this.hasPermission("ticket:create")) {
       this.showCreateModal = true;
       this.cdr.detectChanges();
     }
@@ -194,12 +198,7 @@ export class GroupDetailPage implements OnInit {
   }
 
   openMembersModal() {
-    const canSee = this.hasPermission("group:members");
-    const canManage = this.hasPermission("group:manage") ||
-      this.hasPermission("user:create") ||
-      this.hasPermission("group:edit");
-
-    if (canSee || canManage) {
+    if (this.hasPermission("group:members") || this.hasPermission("group:edit")) {
       this.showMembersModal = true;
       this.cdr.detectChanges();
     }
@@ -224,6 +223,12 @@ export class GroupDetailPage implements OnInit {
   }
 
   async onTicketStatusChange(event: { ticket: Ticket; newStatus: string }) {
+    if (!this.canEditTicket(event.ticket)) {
+      this.messageService.add({ severity: 'error', summary: 'Acceso Denegado', detail: 'Solo el autor o el asignado pueden mover este ticket' });
+      await this.loadTickets();
+      return;
+    }
+
     try {
       await this.ticketService.update(event.ticket.id, { estado_id: event.newStatus });
       await this.loadTickets();
@@ -232,7 +237,29 @@ export class GroupDetailPage implements OnInit {
     }
   }
 
-  backToGroups() {
-    this.router.navigate(["/app/group"]);
+  async onTicketDelete(ticket: Ticket) {
+    if (!this.canEditTicket(ticket)) {
+      this.messageService.add({ severity: 'error', summary: 'Acceso Denegado', detail: 'No tienes permiso para eliminar este ticket' });
+      return;
+    }
+
+    this.confirmationService.confirm({
+      message: '¿Estás seguro de que deseas eliminar este ticket?',
+      header: 'Confirmar Eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      accept: async () => {
+        try {
+          await this.ticketService.delete(ticket.id);
+          this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Ticket eliminado correctamente' });
+          await this.loadTickets();
+        } catch (error) {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el ticket' });
+        }
+      }
+    });
+  }
+
+  goBack() {
+    this.location.back();
   }
 }

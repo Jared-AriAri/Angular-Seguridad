@@ -4,7 +4,7 @@
 
       <div class="dashboard-hero">
         <div class="dashboard-hero__left">
-          <h1 (click)="logoClicked()" class="logo-title">ERPJir</h1>
+          <h1 (click)="logoClicked()" class="logo-title">ERPJared</h1>
           <div class="dashboard-hero__meta">
             <div class="dashboard-version-pill">
               <span>Versión</span>
@@ -18,120 +18,156 @@
         </div>
 
         <div class="dashboard-hero__right" *ngIf="groups && groups.length > 0">
-          <div class="flex flex-column gap-1">
+          <div class="flex flex-column gap-1 w-full">
             <label class="text-white-alpha-70 text-sm font-medium">Workspace Activo</label>
             <p-select [options]="groups" [(ngModel)]="selectedGroup" optionLabel="nombre" (onChange)="onGroupChange()"
-              styleClass="w-full md:w-20rem shadow-2">
+              styleClass="w-full" placeholder="Seleccione un grupo">
             </p-select>
           </div>
         </div>
       </div>
 
       <p-divider></p-divider>
-      <div class="dashboard-kpi-grid mt-4" *ngIf="hasPermission('ticket:view')">
-        <div class="dashboard-stat-card" (click)="goToKanban()">
-          <div class="dashboard-stat-top">
-            <span class="dashboard-stat-label">Total Tickets</span>
-            <i class="pi pi-ticket dashboard-stat-icon"></i>
-          </div>
-          <div class="dashboard-stat-value">{{ stats.total }}</div>
-        </div>
 
-        <div class="dashboard-stat-card dashboard-stat-card--danger" (click)="goToKanban()">
-          <div class="dashboard-stat-top">
-            <span class="dashboard-stat-label">Pendientes</span>
-            <i class="pi pi-clock dashboard-stat-icon"></i>
-          </div>
-          <div class="dashboard-stat-value text-orange-500">{{ stats.pendientes }}</div>
-        </div>
+      <ng-container *ngIf="selectedGroup; else noGroupState">
 
-        <div class="dashboard-stat-card" (click)="goToKanban()">
-          <div class="dashboard-stat-top">
-            <span class="dashboard-stat-label">Finalizados</span>
-            <i class="pi pi-check-circle dashboard-stat-icon"></i>
-          </div>
-          <div class="dashboard-stat-value text-green-500">{{ stats.finalizados }}</div>
-        </div>
-      </div>
-
-      <div class="dashboard-main-grid mt-4">
-        <div class="dashboard-left-column">
-
-          <div class="dashboard-section-card" *ngIf="hasPermission('ticket:view')">
-            <h2 class="dashboard-section-title">Distribución por Estado</h2>
-            <div class="dashboard-chart-wrap mt-3">
-              <p-chart type="bar" [data]="chartData" [options]="chartOptions" height="250px"></p-chart>
+        <div class="dashboard-kpi-grid" *ngIf="hasPermission('ticket:view')">
+          <div class="dashboard-stat-card" (click)="goToKanban()">
+            <div class="dashboard-stat-top">
+              <span class="dashboard-stat-label">Total Tickets</span>
+              <i class="pi pi-ticket dashboard-stat-icon"></i>
             </div>
+            <div class="dashboard-stat-value">{{ stats.total }}</div>
           </div>
 
-          <div class="dashboard-section-card mt-3" *ngIf="hasPermission('ticket:view')">
-            <div class="dashboard-section-head">
-              <h2 class="dashboard-section-title">Tickets Recientes</h2>
-              <div class="dashboard-filters">
-                <button pButton label="Todos" class="p-button-sm p-button-outlined"
-                  [ngClass]="{'p-button-primary': activeQuickFilter === 'all'}"
-                  (click)="applyQuickFilter('all')"></button>
-                <button pButton label="Míos" class="p-button-sm p-button-outlined"
-                  [ngClass]="{'p-button-primary': activeQuickFilter === 'mine'}"
-                  (click)="applyQuickFilter('mine')"></button>
+          <div class="dashboard-stat-card dashboard-stat-card--danger" (click)="goToKanban()">
+            <div class="dashboard-stat-top">
+              <span class="dashboard-stat-label">Pendientes</span>
+              <i class="pi pi-clock dashboard-stat-icon"></i>
+            </div>
+            <div class="dashboard-stat-value text-orange-500">{{ stats.pendientes }}</div>
+          </div>
+
+          <div class="dashboard-stat-card" (click)="goToKanban()">
+            <div class="dashboard-stat-top">
+              <span class="dashboard-stat-label">Finalizados</span>
+              <i class="pi pi-check-circle dashboard-stat-icon"></i>
+            </div>
+            <div class="dashboard-stat-value text-green-500">{{ stats.finalizados }}</div>
+          </div>
+        </div>
+
+        <div class="dashboard-main-grid">
+          <div class="dashboard-left-column">
+
+            <div class="dashboard-section-card" *ngIf="hasPermission('ticket:view')">
+              <h2 class="dashboard-section-title">Distribución por Estado</h2>
+              <div class="dashboard-chart-wrap mt-3">
+                <p-chart type="bar" [data]="chartData" [options]="chartOptions" height="250px"></p-chart>
               </div>
             </div>
 
-            <p-table [value]="filteredRecentTickets" [rows]="5" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th>Título</th>
-                  <th>Estado</th>
-                  <th style="width: 50px"></th>
-                </tr>
-              </ng-template>
+            <div class="dashboard-section-card" *ngIf="hasPermission('ticket:view')">
+              <div class="dashboard-section-head">
+                <h2 class="dashboard-section-title">Tickets Recientes</h2>
+                <div class="dashboard-filters">
+                  <button pButton label="Todos" class="p-button-sm p-button-outlined"
+                    [ngClass]="{'p-button-primary': activeQuickFilter === 'all'}" (click)="applyQuickFilter('all')">
+                  </button>
+                  <button pButton label="Míos" class="p-button-sm p-button-outlined"
+                    [ngClass]="{'p-button-primary': activeQuickFilter === 'mine'}" (click)="applyQuickFilter('mine')">
+                  </button>
+                </div>
+              </div>
 
-              <ng-template pTemplate="body" let-ticket>
-                <tr>
-                  <td class="font-bold text-white">{{ ticket.titulo }}</td>
-                  <td>
-                    <p-tag [value]="getTicketStatusLabel(ticket)" [severity]="getTicketStatusSeverity(ticket)"></p-tag>
-                  </td>
-                  <td>
-                    <button pButton icon="pi pi-eye" class="p-button-rounded p-button-text"
-                      (click)="viewTicket(ticket)"></button>
-                  </td>
-                </tr>
-              </ng-template>
+              <p-table [value]="filteredRecentTickets" [rows]="5" styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th>Título</th>
+                    <th>Estado</th>
+                    <th style="width: 50px"></th>
+                  </tr>
+                </ng-template>
 
-              <ng-template pTemplate="emptymessage">
-                <tr>
-                  <td colspan="3" class="text-center p-4 text-white-alpha-50">
-                    No hay tickets para mostrar
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
+                <ng-template pTemplate="body" let-ticket>
+                  <tr>
+                    <td class="font-bold text-white">{{ ticket.titulo }}</td>
+                    <td>
+                      <p-tag [value]="getTicketStatusLabel(ticket)" [severity]="getTicketStatusSeverity(ticket)">
+                      </p-tag>
+                    </td>
+                    <td>
+                      <button pButton icon="pi pi-eye" class="p-button-rounded p-button-text"
+                        (click)="viewTicket(ticket)">
+                      </button>
+                    </td>
+                  </tr>
+                </ng-template>
+
+                <ng-template pTemplate="emptymessage">
+                  <tr>
+                    <td colspan="3" class="text-center p-4 text-white-alpha-50">
+                      No hay tickets para mostrar
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
           </div>
-        </div>
 
-        <div class="dashboard-right-column">
-          <div class="dashboard-section-card">
-            <h2 class="dashboard-section-title">Gestión</h2>
-            <div class="dashboard-actions mt-3">
-              <button pButton label="Ir al Kanban" icon="pi pi-th-large" class="w-full p-button-primary"
-                (click)="goToKanban()"></button>
+          <div class="dashboard-right-column">
+            <div class="dashboard-section-card">
+              <h2 class="dashboard-section-title">Gestión</h2>
+              <div class="dashboard-actions mt-3">
+                <button pButton label="Ir al Kanban" icon="pi pi-th-large" class="w-full p-button-primary"
+                  (click)="goToKanban()">
+                </button>
 
-              <button *ngIf="hasPermission('ticket:create')" pButton label="Nuevo Ticket" icon="pi pi-plus"
-                class="p-button-success w-full" (click)="openCreateTicket()"></button>
+                <button *ngIf="hasPermission('ticket:create')" pButton label="Nuevo Ticket" icon="pi pi-plus"
+                  class="p-button-success w-full" (click)="openCreateTicket()">
+                </button>
 
-              <p-divider align="left"><span class="text-sm text-white-alpha-50">Admin</span></p-divider>
+                <p-divider align="left">
+                  <span class="text-sm text-white-alpha-50">Panel</span>
+                </p-divider>
 
-              <button *ngIf="hasPermission('user:view')" pButton label="Usuarios" icon="pi pi-users"
-                class="p-button-outlined w-full" [routerLink]="['/app/user']"></button>
+                <button *ngIf="hasPermission('user:view')" pButton label="Usuarios" icon="pi pi-users"
+                  class="p-button-outlined w-full" [routerLink]="['/app/user']">
+                </button>
 
-              <button *ngIf="hasPermission('group:edit')" pButton label="Grupos" icon="pi pi-database"
-                class="p-button-outlined w-full" [routerLink]="['/app/group']"></button>
+                <button *ngIf="hasPermission('group:edit')" pButton label="Grupos" icon="pi pi-database"
+                  class="p-button-outlined w-full" [routerLink]="['/app/group']">
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      </ng-container>
 
-      </div>
+      <ng-template #noGroupState>
+        <div class="flex flex-column align-items-center justify-content-center p-8 text-center opacity-60">
+          <i class="pi pi-lock text-6xl mb-4" *ngIf="!groups || groups.length === 0"></i>
+          <i class="pi pi-briefcase text-6xl mb-4" *ngIf="groups && groups.length > 0"></i>
+
+          <h2 class="text-2xl font-bold text-white">Bienvenido a ERPJared</h2>
+
+          <div *ngIf="groups && groups.length > 0; else requestAssignment">
+            <p class="text-white-alpha-70 max-w-25rem">
+              Tienes acceso a grupos de trabajo. Por favor, <strong>selecciona un Workspace Activo</strong>
+              en la parte superior derecha para cargar tus estadísticas.
+            </p>
+          </div>
+
+          <ng-template #requestAssignment>
+            <p class="text-white-alpha-70 max-w-25rem">
+              Actualmente no perteneces a ningún grupo de trabajo.
+              Por favor, <strong>solicita a un administrador</strong> que te asigne a un grupo para poder gestionar
+              tickets.
+            </p>
+          </ng-template>
+        </div>
+      </ng-template>
+
     </p-card>
   </div>
 </div>

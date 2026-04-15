@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { lastValueFrom, Observable, map } from 'rxjs'; // <-- Agregamos map
+import { lastValueFrom, Observable, map } from 'rxjs';
 import { Ticket } from '../models/ticket.model';
 
 @Injectable({
@@ -57,7 +57,7 @@ export class TicketService {
     );
   }
 
-  async remove(id: string): Promise<void> {
+  async delete(id: string): Promise<void> {
     return await lastValueFrom(this.http.delete<void>(`${this.URL}/${id}`));
   }
 

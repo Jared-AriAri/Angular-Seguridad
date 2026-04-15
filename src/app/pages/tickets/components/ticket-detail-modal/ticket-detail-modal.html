@@ -1,24 +1,28 @@
 <p-dialog [(visible)]="visible" [modal]="true" [style]="{width:'640px', maxWidth: '95vw'}"
   [header]="'Detalle del Ticket'" (onHide)="close()">
 
-  <ng-container *ngIf="editableTicket">
+  <div *ngIf="loading" class="flex justify-content-center align-items-center p-5">
+    <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+  </div>
+
+  <ng-container *ngIf="!loading && editableTicket">
 
     <div class="p-fluid">
 
       <div class="field mb-3">
-        <label class="font-bold">Título</label>
+        <label class="font-bold text-white">Título</label>
         <input pInputText [(ngModel)]="editableTicket.titulo" [disabled]="!canEditTicket" />
       </div>
 
       <div class="field mb-3">
-        <label class="font-bold">Descripción</label>
+        <label class="font-bold text-white">Descripción</label>
         <textarea pTextarea rows="3" [(ngModel)]="editableTicket.descripcion" [disabled]="!canEditTicket"></textarea>
       </div>
 
       <div class="grid mb-3">
         <div class="col-12 md:col-6">
           <div class="field">
-            <label class="font-bold">Estado</label>
+            <label class="font-bold text-white">Estado</label>
             <p-select [options]="statusOptions" [(ngModel)]="editableTicket.estado_id" optionLabel="label"
               optionValue="value" [disabled]="!canEditTicket" appendTo="body"></p-select>
           </div>
@@ -26,7 +30,7 @@
 
         <div class="col-12 md:col-6">
           <div class="field">
-            <label class="font-bold">Prioridad</label>
+            <label class="font-bold text-white">Prioridad</label>
             <p-select [options]="priorityOptions" [(ngModel)]="editableTicket.prioridad_id" optionLabel="label"
               optionValue="value" [disabled]="!canEditTicket" appendTo="body"></p-select>
           </div>
@@ -36,7 +40,7 @@
       <div class="grid mb-3">
         <div class="col-12 md:col-6">
           <div class="field">
-            <label class="font-bold">Asignado a</label>
+            <label class="font-bold text-white">Asignado a</label>
             <p-select [options]="assignedOptions" [(ngModel)]="editableTicket.asignado_id" optionLabel="label"
               optionValue="value" [disabled]="!canEditTicket" placeholder="Seleccionar usuario"
               appendTo="body"></p-select>
@@ -45,7 +49,7 @@
 
         <div class="col-12 md:col-6">
           <div class="field">
-            <label class="font-bold">Fecha límite</label>
+            <label class="font-bold text-white">Fecha límite</label>
             <p-datepicker [(ngModel)]="editableTicket.fecha_final" [disabled]="!canEditTicket" dateFormat="yy-mm-dd"
               [showIcon]="true" appendTo="body"></p-datepicker>
           </div>
@@ -54,33 +58,49 @@
 
     </div>
 
-    <hr class="my-4" style="opacity: 0.2;">
+    <hr class="my-4" style="opacity: 0.1;">
 
     <div class="comments-section">
-      <label class="font-bold block mb-2">Comentarios ({{ comentarios.length }})</label>
+      <label class="font-bold block mb-3 text-white">Comentarios ({{ comentarios.length }})</label>
 
-      <div class="comments-list mb-3" style="max-height: 200px; overflow-y: auto;">
-        <div *ngFor="let c of comentarios" class="mb-3 p-2 border-round shadow-1" style="background: #f8fafc;">
-          <div class="flex justify-content-between align-items-center mb-1">
-            <p-tag severity="secondary" [value]="c.usuarios?.nombre_completo || c.usuarios?.username"></p-tag>
+      <div class="comments-list mb-3 p-2 border-round bg-gray-900 border-1 border-gray-800"
+        style="max-height: 250px; overflow-y: auto;">
+
+        <div *ngIf="comentarios.length === 0" class="text-center p-4 text-500 italic">
+          No hay comentarios aún.
+        </div>
+
+        <div *ngFor="let c of comentarios" class="mb-3 p-3 border-round border-left-3 border-primary shadow-2"
+          style="background: rgba(255,255,255,0.03);">
+
+          <div class="flex justify-content-between align-items-center mb-2">
+            <div class="flex align-items-center gap-2">
+              <i class="pi pi-user text-primary" style="font-size: 0.8rem;"></i>
+              <span class="font-bold text-sm text-white">
+                {{ c.usuarios?.nombre_completo || c.usuarios?.username }}
+              </span>
+            </div>
             <small class="text-500">{{ c.creado_en | date:'short' }}</small>
           </div>
-          <div class="text-700 ml-1">{{ c.contenido }}</div>
+
+          <div class="text-gray-300 ml-1 line-height-3" style="font-size: 0.95rem;">
+            {{ c.contenido }}
+          </div>
         </div>
       </div>
 
-      <div class="p-inputgroup mt-2">
+      <div class="p-inputgroup mt-3">
         <input pInputText [(ngModel)]="newComment" placeholder="Escribe un comentario..." (keyup.enter)="addComment()"
-          [disabled]="!canEditTicket" />
-        <button pButton icon="pi pi-send" (click)="addComment()"
-          [disabled]="!canEditTicket || !newComment.trim()"></button>
+          class="bg-gray-800 border-gray-700 text-white" />
+        <button pButton icon="pi pi-send" class="p-button-primary" (click)="addComment()"
+          [disabled]="!newComment.trim()"></button>
       </div>
     </div>
 
     <div class="history-section mt-4" *ngIf="historial.length">
-      <label class="font-bold block mb-2 text-sm opacity-60">Historial reciente</label>
+      <label class="font-bold block mb-2 text-sm opacity-60 text-white">Historial reciente</label>
       <div class="text-xs text-500">
-        <div *ngFor="let h of historial.slice(0, 3)" class="mb-1">
+        <div *ngFor="let h of historial.slice(0, 3)" class="mb-1 text-gray-400">
           • {{ h.accion }}: {{ h.detalles?.nuevo_estado || '' }} ({{ h.usuarios?.nombre_completo }}) - {{ h.creado_en |
           date:'shortDate' }}
         </div>
@@ -91,10 +111,8 @@
 
   <ng-template pTemplate="footer">
     <div class="flex justify-content-end gap-2">
-      <button pButton label="Guardar cambios" icon="pi pi-check" (click)="save()" [disabled]="!canEditTicket"></button>
-
-      <button pButton label="Cerrar" icon="pi pi-times" class="p-button-secondary p-button-text"
-        (click)="close()"></button>
+      <button *ngIf="canEditTicket && !loading" pButton label="Guardar cambios" icon="pi pi-check"
+        (click)="save()"></button>
     </div>
   </ng-template>
 

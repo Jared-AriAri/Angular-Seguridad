@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output, OnInit, inject, ChangeDetectorRef } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
+import { lastValueFrom } from "rxjs";
 import { DialogModule } from "primeng/dialog";
 import { InputTextModule } from "primeng/inputtext";
 import { TextareaModule } from "primeng/textarea";
@@ -40,9 +41,8 @@ export class CreateTicketModalComponent implements OnInit {
   @Output() closeModal = new EventEmitter<void>();
   @Output() ticketCreated = new EventEmitter<void>();
 
-  priorityOptions: { label: string; value: string }[] = [];
-  assignedOptions: { label: string; value: string }[] = [];
-
+  priorityOptions: any[] = [];
+  assignedOptions: any[] = [];
   defaultEstadoId = "";
   currentUserId = "";
   isSaving = false;
@@ -56,42 +56,39 @@ export class CreateTicketModalComponent implements OnInit {
   };
 
   async ngOnInit() {
-    await this.loadDependencies();
+    await this.initData();
   }
 
-  private async loadDependencies() {
-    this.ticketService.getPriorities().subscribe((res: any) => {
-      const prioridades = res?.data || res || [];
+  private async initData() {
+    try {
+      const [resPriorities, resStates, resUsers]: any[] = await Promise.all([
+        lastValueFrom(this.ticketService.getPriorities()),
+        lastValueFrom(this.apiService.getStates()),
+        this.userService.getAll()
+      ]);
+
+      const prioridades = resPriorities?.data || resPriorities || [];
       this.priorityOptions = prioridades.map((p: any) => ({ label: p.nombre, value: p.id }));
-      if (this.priorityOptions.length > 0 && !this.form.prioridad_id) {
-        this.form.prioridad_id = this.priorityOptions[0].value;
-      }
+      if (this.priorityOptions.length > 0) this.form.prioridad_id = this.priorityOptions[0].value;
+
+      const estados = resStates?.data || resStates || [];
+      const pendiente = estados.find((e: any) => e.nombre.toLowerCase() === 'pendiente');
+      this.defaultEstadoId = pendiente ? pendiente.id : (estados[0]?.id || "");
+
+      const usuarios = resUsers?.data || resUsers || [];
+      this.assignedOptions = usuarios.map((u: any) => ({
+        label: u.nombre_completo || u.username,
+        value: u.id
+      }));
+      this.assignedOptions.unshift({ label: "Sin asignar", value: "" });
+
+      this.currentUserId = this.authService.getCurrentUser()?.id || "";
+
+    } catch (e) {
+      console.error(e);
+    } finally {
       this.cdr.detectChanges();
-    });
-
-    this.apiService.getStates().subscribe((res: any) => {
-      const estados = res?.data || res || [];
-      const estadoPendiente = estados.find((e: any) => e.nombre.toLowerCase() === 'pendiente') || estados[0];
-      if (estadoPendiente) {
-        this.defaultEstadoId = estadoPendiente.id;
-      }
-      this.cdr.detectChanges();
-    });
-
-    const resUsers: any = await this.userService.getAll();
-    const usuarios = resUsers?.data || resUsers || [];
-
-    this.assignedOptions = usuarios.map((u: any) => ({
-      label: u.nombre_completo || u.username,
-      value: u.id
-    }));
-    this.assignedOptions.unshift({ label: "Sin asignar", value: "" });
-
-    const user = this.authService.getCurrentUser();
-    if (user) {
-      this.currentUserId = user.id;
     }
-    this.cdr.detectChanges();
   }
 
   private toISODate(value: Date | null) {
@@ -103,29 +100,25 @@ export class CreateTicketModalComponent implements OnInit {
   }
 
   close() {
+    this.visible = false;
     this.closeModal.emit();
   }
 
   async save() {
-    const titulo = this.form.titulo.trim();
+    if (this.isSaving) return;
 
+    const titulo = this.form.titulo.trim();
     if (!titulo || !this.groupId || !this.defaultEstadoId || !this.currentUserId || !this.form.prioridad_id) {
-      console.error("Faltan datos obligatorios:", {
-        titulo,
-        groupId: this.groupId,
-        estadoId: this.defaultEstadoId,
-        userId: this.currentUserId,
-        prioridadId: this.form.prioridad_id
-      });
       return;
     }
 
     this.isSaving = true;
+    this.cdr.detectChanges();
 
     const payload = {
       grupo_id: this.groupId,
       titulo: titulo,
-      descripcion: this.form.descripcion.trim() || null,
+      descripcion: this.form.descripcion?.trim() || null,
       autor_id: this.currentUserId,
       asignado_id: this.form.asignado_id || null,
       estado_id: this.defaultEstadoId,
@@ -142,6 +135,7 @@ export class CreateTicketModalComponent implements OnInit {
       console.error(error);
     } finally {
       this.isSaving = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -149,7 +143,7 @@ export class CreateTicketModalComponent implements OnInit {
     this.form = {
       titulo: "",
       descripcion: "",
-      prioridad_id: this.priorityOptions.length > 0 ? this.priorityOptions[0].value : "",
+      prioridad_id: this.priorityOptions[0]?.value || "",
       asignado_id: "",
       fecha_final: null,
     };

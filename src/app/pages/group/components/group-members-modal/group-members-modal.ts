@@ -31,6 +31,7 @@ export class GroupMembersModalComponent implements OnChanges {
   userOptions: any[] = [];
   selectedUserId = "";
   canManageGroupMembers = false;
+  loading = false;
 
   async ngOnChanges(changes: SimpleChanges) {
     if (this.visible && this.groupId) {
@@ -42,11 +43,12 @@ export class GroupMembersModalComponent implements OnChanges {
   checkPermissions() {
     this.canManageGroupMembers =
       this.auth.hasPermission("group:manage") ||
-      this.auth.hasPermission("user:create") ||
       this.auth.hasPermission("group:edit");
   }
 
   async loadData() {
+    this.loading = true;
+    this.cdr.detectChanges();
     try {
       const [allUsersRes, groupMembersRes]: any[] = await Promise.all([
         this.userService.getAll(),
@@ -59,7 +61,7 @@ export class GroupMembersModalComponent implements OnChanges {
       this.members = rawMembers.map((m: any) => ({
         ...m,
         usuario_id: m.usuario_id || m.id,
-        display_name: m.nombre_completo || m.fullName || m.username || 'Usuario',
+        display_name: m.nombre_completo || m.username || 'Usuario',
         display_email: m.email || 'Sin email'
       }));
 
@@ -72,31 +74,40 @@ export class GroupMembersModalComponent implements OnChanges {
           value: u.id
         }));
 
-      this.cdr.detectChanges();
     } catch (e) {
+      console.error(e);
       this.members = [];
       this.userOptions = [];
+    } finally {
+      this.loading = false;
       this.cdr.detectChanges();
     }
   }
 
   async addMember() {
-    if (!this.selectedUserId) return;
+    if (!this.selectedUserId || this.loading) return;
+    this.loading = true;
     try {
       await this.groupService.addMember(this.groupId, this.selectedUserId);
       this.selectedUserId = "";
       await this.loadData();
     } catch (e) {
       console.error(e);
+      this.loading = false;
+      this.cdr.detectChanges();
     }
   }
 
   async removeMember(userId: string) {
+    if (this.loading) return;
+    this.loading = true;
     try {
       await this.groupService.removeMember(this.groupId, userId);
       await this.loadData();
     } catch (e) {
       console.error(e);
+      this.loading = false;
+      this.cdr.detectChanges();
     }
   }
 

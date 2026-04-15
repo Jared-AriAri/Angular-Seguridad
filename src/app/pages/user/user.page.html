@@ -15,8 +15,9 @@
         <div class="flex gap-2">
           <button *ngIf="hasPermission('user:create')" pButton type="button" icon="pi pi-plus" label="Nuevo Usuario"
             class="p-button-success" (click)="openCreate()"></button>
+
           <button pButton type="button" icon="pi pi-refresh" class="p-button-text p-button-secondary"
-            (click)="refresh()"></button>
+            (click)="refresh()" [loading]="loading"></button>
         </div>
       </ng-template>
 
@@ -31,7 +32,7 @@
 
     <div class="mt-2">
       <p-table [value]="filteredUsers" [loading]="loading" [paginator]="true" [rows]="10"
-        styleClass="p-datatable-sm p-datatable-striped">
+        styleClass="p-datatable-sm p-datatable-striped" [responsiveLayout]="'scroll'">
         <ng-template pTemplate="header">
           <tr>
             <th>Usuario</th>
@@ -52,21 +53,23 @@
             <td>{{ u.email }}</td>
             <td style="text-align: center;">
               <p-tag [value]="u.permisos_globales?.length || 0"
-                [severity]="(u.permisos_globales?.length || 0) > 0 ? 'success' : 'secondary'" [rounded]="true"></p-tag>
+                [severity]="(u.permisos_globales?.length || 0) > 0 ? 'success' : 'secondary'" [rounded]="true"
+                pTooltip="Permisos activos"></p-tag>
             </td>
 
             <td style="text-align: right; white-space: nowrap;">
               <button *ngIf="hasPermission('user:permissions:edit')" pButton type="button" icon="pi pi-key"
-                class="p-button-text p-button-warning" (click)="openPermissions(u)" pTooltip="Permisos"></button>
+                class="p-button-text p-button-warning" (click)="openPermissions(u)"
+                pTooltip="Gestionar Permisos"></button>
 
-              <button *ngIf="hasPermission('user:view')" pButton type="button" icon="pi pi-eye"
-                class="p-button-text p-button-info" (click)="openView(u)" pTooltip="Ver Detalle"></button>
+              <button pButton type="button" icon="pi pi-eye" class="p-button-text p-button-info" (click)="openView(u)"
+                pTooltip="Ver Detalle"></button>
 
               <button *ngIf="hasPermission('user:edit')" pButton type="button" icon="pi pi-pencil" class="p-button-text"
-                (click)="openEdit(u)" pTooltip="Editar"></button>
+                (click)="openEdit(u)" pTooltip="Editar Perfil"></button>
 
               <button *ngIf="hasPermission('user:delete')" pButton type="button" icon="pi pi-trash"
-                class="p-button-text p-button-danger" (click)="askDelete(u)" pTooltip="Eliminar"></button>
+                class="p-button-text p-button-danger" (click)="askDelete(u)" pTooltip="Eliminar Usuario"></button>
             </td>
           </tr>
         </ng-template>
@@ -77,53 +80,68 @@
 
 <p-dialog [(visible)]="dialogOpen" [modal]="true" [draggable]="false" [resizable]="false" [appendTo]="'body'"
   [style]="{ width: '750px', maxWidth: '95vw' }" [header]="form.id ? 'Modificar Usuario' : 'Registrar Nuevo Usuario'">
+
   <div class="p-fluid grid mt-2">
+    <div class="field col-12" *ngIf="!form.id">
+      <label class="font-bold text-primary">Contraseña Temporal *</label>
+      <input pInputText type="password" [(ngModel)]="form.password" placeholder="Mínimo 6 caracteres" />
+    </div>
+
     <div class="field col-12 md:col-6">
-      <label class="font-bold">Nombre de Usuario</label>
+      <label class="font-bold">Nombre de Usuario *</label>
       <input pInputText [(ngModel)]="form.username" [disabled]="!!form.id" />
     </div>
     <div class="field col-12 md:col-6">
-      <label class="font-bold">Correo Electrónico</label>
+      <label class="font-bold">Correo Electrónico *</label>
       <input pInputText [(ngModel)]="form.email" [disabled]="!!form.id" />
     </div>
     <div class="field col-12">
-      <label class="font-bold">Nombre Completo</label>
+      <label class="font-bold">Nombre Completo *</label>
       <input pInputText [(ngModel)]="form.nombre_completo" />
     </div>
     <div class="field col-12 md:col-6">
       <label class="font-bold">Teléfono</label>
-      <input pInputText [(ngModel)]="form.telefono" />
+      <input pInputText type="text" [(ngModel)]="form.telefono" maxlength="10" pKeyFilter="num"
+        placeholder="Ej: 5512345678" />
     </div>
     <div class="field col-12 md:col-6">
       <label class="font-bold">Fecha de Nacimiento</label>
-      <input pInputText type="date" [(ngModel)]="form.fecha_nacimiento" />
+      <p-datepicker [(ngModel)]="form.fecha_nacimiento" appendTo="body" [showIcon]="true"
+        dateFormat="dd/mm/yy"></p-datepicker>
     </div>
     <div class="field col-12">
       <label class="font-bold">Dirección</label>
       <input pInputText [(ngModel)]="form.direccion" />
     </div>
   </div>
+
   <ng-template pTemplate="footer">
-    <button pButton type="button" class="p-button-text" label="Cancelar" (click)="dialogOpen = false"></button>
-    <button pButton type="button" icon="pi pi-save" label="Guardar" (click)="save()"></button>
+    <button pButton type="button" class="p-button-text p-button-secondary" label="Cancelar"
+      (click)="dialogOpen = false"></button>
+    <button pButton type="button" icon="pi pi-save" label="Guardar Usuario" class="p-button-primary"
+      (click)="save()"></button>
   </ng-template>
 </p-dialog>
 
 <p-dialog [(visible)]="permissionsOpen" [modal]="true" [draggable]="false" [appendTo]="'body'"
   [header]="'Permisos Globales: ' + selectedUser?.username" [style]="{ width: '650px' }">
+
   <div class="p-fluid">
+    <p class="mb-4 opacity-70">Selecciona los permisos globales del sistema.</p>
     <div class="grid">
-      <div *ngFor="let perm of allPermissionsList" class="col-12 md:col-6 mb-3">
-        <div class="flex align-items-center p-2 border-round hover:surface-hover">
+      <div *ngFor="let perm of allPermissionsList" class="col-12 md:col-6 mb-2">
+        <div
+          class="flex align-items-center p-3 border-round surface-card border-1 border-transparent hover:border-primary">
           <p-checkbox [value]="perm" [(ngModel)]="userPermissions" [inputId]="perm"></p-checkbox>
-          <label [for]="perm" class="ml-2 cursor-pointer w-full font-medium text-white">{{ perm }}</label>
+          <label [for]="perm" class="ml-3 cursor-pointer w-full font-medium text-white">{{ perm }}</label>
         </div>
       </div>
     </div>
   </div>
+
   <ng-template pTemplate="footer">
     <button pButton label="Cancelar" class="p-button-text" (click)="permissionsOpen = false"></button>
-    <button pButton label="Actualizar" icon="pi pi-lock-open" class="p-button-success"
+    <button pButton label="Actualizar Permisos" icon="pi pi-shield" class="p-button-success"
       (click)="savePermissions()"></button>
   </ng-template>
 </p-dialog>

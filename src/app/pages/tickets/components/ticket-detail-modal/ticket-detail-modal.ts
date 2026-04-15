@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { lastValueFrom } from 'rxjs';
 import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
 import { SelectModule } from 'primeng/select';
@@ -8,6 +9,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { ToastModule } from 'primeng/toast';
 
 import { TicketService } from '../../../../core/services/ticket.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -26,7 +28,8 @@ import { ApiService } from '../../../../core/api.service';
     InputTextModule,
     TextareaModule,
     ButtonModule,
-    DatePickerModule
+    DatePickerModule,
+    ToastModule
   ],
   templateUrl: './ticket-detail-modal.html'
 })
@@ -39,7 +42,7 @@ export class TicketDetailModalComponent implements OnChanges {
 
   @Input() visible = false;
   @Input() ticket: any = null;
-  @Input() canEdit = false; // Agregado para resolver el error del template
+  @Input() canEdit = false;
 
   @Output() closeModal = new EventEmitter<void>();
 
@@ -47,46 +50,66 @@ export class TicketDetailModalComponent implements OnChanges {
   newComment = '';
   canEditTicket = false;
   currentUserId = '';
+  loading = false;
 
-  statusOptions: { label: string; value: string }[] = [];
-  priorityOptions: { label: string; value: string }[] = [];
-  assignedOptions: { label: string; value: string }[] = [];
-
+  statusOptions: any[] = [];
+  priorityOptions: any[] = [];
+  assignedOptions: any[] = [];
   comentarios: any[] = [];
   historial: any[] = [];
 
   async ngOnChanges(changes: SimpleChanges) {
     if (changes['visible'] && this.visible && this.ticket) {
-      this.editableTicket = { ...this.ticket };
+      await this.initModal();
+    }
+  }
 
-      if (this.editableTicket.fecha_final) {
-        this.editableTicket.fecha_final = new Date(this.editableTicket.fecha_final);
-      }
+  private async initModal() {
+    this.loading = true;
+    this.cdr.detectChanges();
 
-      this.currentUserId = this.authService.getCurrentUser()?.id || '';
+    this.editableTicket = { ...this.ticket };
+    if (this.editableTicket.fecha_final) {
+      this.editableTicket.fecha_final = new Date(this.editableTicket.fecha_final);
+    }
 
-      await this.loadLookups();
-      await this.loadRelatedData();
+    this.currentUserId = this.authService.getCurrentUser()?.id || '';
+    this.canEditTicket = this.canEdit || this.canUserEdit(this.ticket);
 
-      // Prioriza el input canEdit si viene del padre, de lo contrario evalúa permisos
-      this.canEditTicket = this.canEdit || this.canUserEdit(this.ticket);
+    try {
+      await Promise.all([
+        this.loadStatusOptions(),
+        this.loadPriorityOptions(),
+        this.loadUserOptions(),
+        this.loadComments(),
+        this.loadHistory()
+      ]);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      this.loading = false;
       this.cdr.detectChanges();
     }
   }
 
-  private async loadLookups() {
-    this.apiService.getStates().subscribe((res: any) => {
-      const data = res?.data || res || [];
-      this.statusOptions = data.map((e: any) => ({ label: e.nombre, value: e.id }));
-    });
+  private async loadStatusOptions() {
+    if (this.statusOptions.length > 0) return;
+    const res: any = await lastValueFrom(this.apiService.getStates());
+    const data = res?.data || res || [];
+    this.statusOptions = data.map((e: any) => ({ label: e.nombre, value: e.id }));
+  }
 
-    this.ticketService.getPriorities().subscribe((res: any) => {
-      const data = res?.data || res || [];
-      this.priorityOptions = data.map((p: any) => ({ label: p.nombre, value: p.id }));
-    });
+  private async loadPriorityOptions() {
+    if (this.priorityOptions.length > 0) return;
+    const res: any = await lastValueFrom(this.ticketService.getPriorities());
+    const data = res?.data || res || [];
+    this.priorityOptions = data.map((p: any) => ({ label: p.nombre, value: p.id }));
+  }
 
-    const resUsers: any = await this.userService.getAll();
-    const usuarios = resUsers?.data || resUsers || [];
+  private async loadUserOptions() {
+    if (this.assignedOptions.length > 1) return;
+    const res: any = await this.userService.getAll();
+    const usuarios = res?.data || res || [];
     this.assignedOptions = usuarios.map((u: any) => ({
       label: u.nombre_completo || u.username,
       value: u.id
@@ -94,22 +117,19 @@ export class TicketDetailModalComponent implements OnChanges {
     this.assignedOptions.unshift({ label: 'Sin asignar', value: '' });
   }
 
-  private async loadRelatedData() {
-    if (!this.ticket?.id) return;
+  private async loadComments() {
+    const res: any = await lastValueFrom(this.ticketService.getComments(this.ticket.id));
+    this.comentarios = res?.data || res || [];
+  }
 
-    this.ticketService.getComments(this.ticket.id).subscribe((res: any) => {
-      this.comentarios = res?.data || res || [];
-    });
-
-    this.ticketService.getHistory(this.ticket.id).subscribe((res: any) => {
-      this.historial = res?.data || res || [];
-    });
+  private async loadHistory() {
+    const res: any = await lastValueFrom(this.ticketService.getHistory(this.ticket.id));
+    this.historial = res?.data || res || [];
   }
 
   private canUserEdit(ticket: any) {
     if (!ticket) return false;
     if (this.authService.hasPermission("ticket:edit" as any)) return true;
-
     return (
       this.authService.hasPermission("ticket:comment" as any) &&
       (ticket.asignado_id === this.currentUserId || ticket.autor_id === this.currentUserId)
@@ -162,7 +182,7 @@ export class TicketDetailModalComponent implements OnChanges {
     try {
       await this.ticketService.addComment(commentPayload);
       this.newComment = '';
-      await this.loadRelatedData();
+      await this.loadComments();
       this.cdr.detectChanges();
     } catch (e) {
       console.error(e);
